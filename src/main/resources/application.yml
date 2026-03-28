@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: yunbian-ads-scoring-java
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+yunbian:
+  env: ${TARGET_ENV:test}
+  log-level: ${LOG_LEVEL:INFO}
+  scoring:
+    default-sid: 71236848
+    default-log-date: 2026-03-25
+  database:
+    host: ${DB_HOST:}
+    port: ${DB_PORT:}
+    name: ${DB_NAME:}
+    user: ${DB_USER:}
+    password: ${DB_PASSWORD:}
+    schema: ${DB_SCHEMA:}

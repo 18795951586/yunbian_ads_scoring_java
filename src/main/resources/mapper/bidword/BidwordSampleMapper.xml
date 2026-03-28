@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunbian.adsscoring.bidword.mapper.BidwordSampleMapper">
+
+    <select id="selectSampleBySidAndLogDate"
+            resultType="com.yunbian.adsscoring.bidword.dto.BidwordSampleItem">
+        SELECT
+            sid,
+            log_date AS logDate,
+            effect,
+            campaign_id AS campaignId,
+            campaign_name AS campaignName,
+            promotion_id AS promotionId,
+            promotion_name AS promotionName,
+            adgroup_id AS adgroupId,
+            adgroup_name AS adgroupName,
+            bidword_id AS bidwordId,
+            bid_word_type AS bidWordType,
+            bid_word_type_name AS bidWordTypeName,
+            original_word AS originalWord,
+            charge,
+            ecpc,
+            cvr,
+            roi,
+            cart_cost AS cartCost
+        FROM onebp_report_day_bidword
+        WHERE sid = #{sid}
+          AND log_date = #{logDate}
+        ORDER BY bidword_id ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

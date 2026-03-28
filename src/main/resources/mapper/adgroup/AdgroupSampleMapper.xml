@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunbian.adsscoring.adgroup.mapper.AdgroupSampleMapper">
+
+    <select id="selectSampleBySidAndLogDate"
+            resultType="com.yunbian.adsscoring.adgroup.dto.AdgroupSampleItem">
+        SELECT
+            sid,
+            log_date AS logDate,
+            effect,
+            campaign_id AS campaignId,
+            campaign_name AS campaignName,
+            adgroup_id AS adgroupId,
+            adgroup_name AS adgroupName,
+            charge,
+            ecpc,
+            cvr,
+            roi,
+            cart_cost AS cartCost
+        FROM onebp_report_day_adgroup
+        WHERE sid = #{sid}
+          AND log_date = #{logDate}
+        ORDER BY adgroup_id ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
