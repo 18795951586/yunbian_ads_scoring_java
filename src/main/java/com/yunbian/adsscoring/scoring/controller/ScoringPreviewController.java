@@ -43,7 +43,7 @@ public class ScoringPreviewController {
             );
         }
 
-        if (effectDays == null || (effectDays != 1 && effectDays != 3 && effectDays != 7)) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
 
@@ -60,7 +60,7 @@ public class ScoringPreviewController {
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
-        if (effectDays == null || (effectDays != 1 && effectDays != 3 && effectDays != 7)) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
 
