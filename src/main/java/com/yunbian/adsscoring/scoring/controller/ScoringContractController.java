@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.controller;
 
 import com.yunbian.adsscoring.common.ApiResponse;
 import com.yunbian.adsscoring.scoring.dto.ScoringContractTemplateResponse;
+import com.yunbian.adsscoring.scoring.dto.ScoringSchemeCreatePreviewResponse;
 import com.yunbian.adsscoring.scoring.request.ScoringSchemeCreateRequest;
 import com.yunbian.adsscoring.scoring.service.ScoringContractService;
 import jakarta.annotation.Resource;
@@ -21,7 +22,7 @@ public class ScoringContractController {
     }
 
     @PostMapping("/create-request/preview")
-    public ApiResponse<ScoringSchemeCreateRequest> previewCreateRequest(
+    public ApiResponse<ScoringSchemeCreatePreviewResponse> previewCreateRequest(
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
         return ApiResponse.success(scoringContractService.previewCreateRequest(request));

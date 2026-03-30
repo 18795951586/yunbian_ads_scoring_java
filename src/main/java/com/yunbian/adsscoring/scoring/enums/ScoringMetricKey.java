@@ -72,4 +72,20 @@ public enum ScoringMetricKey {
     public String getDataHint() {
         return dataHint;
     }
+
+    public boolean isHigherBetter() {
+        return "HIGHER_BETTER".equals(direction);
+    }
+
+    public static ScoringMetricKey fromCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        for (ScoringMetricKey value : values()) {
+            if (value.code.equalsIgnoreCase(code.trim())) {
+                return value;
+            }
+        }
+        return null;
+    }
 }

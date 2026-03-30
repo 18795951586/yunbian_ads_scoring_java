@@ -14,16 +14,25 @@ public class CampaignMetricsMatrixItem {
     private BigDecimal cvr1d;
     private BigDecimal ecpc1d;
     private BigDecimal cartCost1d;
+    private BigDecimal dealNewCustomerRatio1d;
+    private BigDecimal newCustomerRatio1d;
+    private BigDecimal directDealRatio1d;
 
     private BigDecimal roi3d;
     private BigDecimal cvr3d;
     private BigDecimal ecpc3d;
     private BigDecimal cartCost3d;
+    private BigDecimal dealNewCustomerRatio3d;
+    private BigDecimal newCustomerRatio3d;
+    private BigDecimal directDealRatio3d;
 
     private BigDecimal roi7d;
     private BigDecimal cvr7d;
     private BigDecimal ecpc7d;
     private BigDecimal cartCost7d;
+    private BigDecimal dealNewCustomerRatio7d;
+    private BigDecimal newCustomerRatio7d;
+    private BigDecimal directDealRatio7d;
 
     public Long getSid() {
         return sid;
@@ -89,6 +98,30 @@ public class CampaignMetricsMatrixItem {
         this.cartCost1d = cartCost1d;
     }
 
+    public BigDecimal getDealNewCustomerRatio1d() {
+        return dealNewCustomerRatio1d;
+    }
+
+    public void setDealNewCustomerRatio1d(BigDecimal dealNewCustomerRatio1d) {
+        this.dealNewCustomerRatio1d = dealNewCustomerRatio1d;
+    }
+
+    public BigDecimal getNewCustomerRatio1d() {
+        return newCustomerRatio1d;
+    }
+
+    public void setNewCustomerRatio1d(BigDecimal newCustomerRatio1d) {
+        this.newCustomerRatio1d = newCustomerRatio1d;
+    }
+
+    public BigDecimal getDirectDealRatio1d() {
+        return directDealRatio1d;
+    }
+
+    public void setDirectDealRatio1d(BigDecimal directDealRatio1d) {
+        this.directDealRatio1d = directDealRatio1d;
+    }
+
     public BigDecimal getRoi3d() {
         return roi3d;
     }
@@ -121,6 +154,30 @@ public class CampaignMetricsMatrixItem {
         this.cartCost3d = cartCost3d;
     }
 
+    public BigDecimal getDealNewCustomerRatio3d() {
+        return dealNewCustomerRatio3d;
+    }
+
+    public void setDealNewCustomerRatio3d(BigDecimal dealNewCustomerRatio3d) {
+        this.dealNewCustomerRatio3d = dealNewCustomerRatio3d;
+    }
+
+    public BigDecimal getNewCustomerRatio3d() {
+        return newCustomerRatio3d;
+    }
+
+    public void setNewCustomerRatio3d(BigDecimal newCustomerRatio3d) {
+        this.newCustomerRatio3d = newCustomerRatio3d;
+    }
+
+    public BigDecimal getDirectDealRatio3d() {
+        return directDealRatio3d;
+    }
+
+    public void setDirectDealRatio3d(BigDecimal directDealRatio3d) {
+        this.directDealRatio3d = directDealRatio3d;
+    }
+
     public BigDecimal getRoi7d() {
         return roi7d;
     }
@@ -151,5 +208,29 @@ public class CampaignMetricsMatrixItem {
 
     public void setCartCost7d(BigDecimal cartCost7d) {
         this.cartCost7d = cartCost7d;
+    }
+
+    public BigDecimal getDealNewCustomerRatio7d() {
+        return dealNewCustomerRatio7d;
+    }
+
+    public void setDealNewCustomerRatio7d(BigDecimal dealNewCustomerRatio7d) {
+        this.dealNewCustomerRatio7d = dealNewCustomerRatio7d;
+    }
+
+    public BigDecimal getNewCustomerRatio7d() {
+        return newCustomerRatio7d;
+    }
+
+    public void setNewCustomerRatio7d(BigDecimal newCustomerRatio7d) {
+        this.newCustomerRatio7d = newCustomerRatio7d;
+    }
+
+    public BigDecimal getDirectDealRatio7d() {
+        return directDealRatio7d;
+    }
+
+    public void setDirectDealRatio7d(BigDecimal directDealRatio7d) {
+        this.directDealRatio7d = directDealRatio7d;
     }
 }

@@ -15,4 +15,9 @@ public interface CampaignMetricsMatrixMapper {
             @Param("logDate") LocalDate logDate,
             @Param("limit") Integer limit
     );
+
+    List<CampaignMetricsMatrixItem> selectAllMetricsMatrixBySidAndLogDate(
+            @Param("sid") Long sid,
+            @Param("logDate") LocalDate logDate
+    );
 }

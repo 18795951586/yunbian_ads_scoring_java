@@ -1,6 +1,7 @@
 package com.yunbian.adsscoring.scoring.service.impl;
 
 import com.yunbian.adsscoring.scoring.dto.ScoringContractTemplateResponse;
+import com.yunbian.adsscoring.scoring.dto.ScoringSchemeCreatePreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.enums.ScoringRuleType;
@@ -18,10 +19,12 @@ import java.util.List;
 @Service
 public class ScoringContractServiceImpl implements ScoringContractService {
 
+    private static final String CONTRACT_VERSION = "scoring_contract_v2";
+
     @Override
     public ScoringContractTemplateResponse buildTemplate() {
         return new ScoringContractTemplateResponse(
-                "scoring_contract_v2",
+                CONTRACT_VERSION,
                 buildRuleTypeOptions(),
                 buildMetricDefinitions(),
                 buildEntityLevelDefinitions(),
@@ -31,8 +34,27 @@ public class ScoringContractServiceImpl implements ScoringContractService {
     }
 
     @Override
-    public ScoringSchemeCreateRequest previewCreateRequest(ScoringSchemeCreateRequest request) {
-        return request;
+    public ScoringSchemeCreatePreviewResponse previewCreateRequest(ScoringSchemeCreateRequest request) {
+        List<ScoringSchemeCreatePreviewResponse.LevelPreview> levelPreviews = request.getLevelConfigs().stream()
+                .map(this::buildLevelPreview)
+                .toList();
+
+        int totalMetricCount = levelPreviews.stream()
+                .mapToInt(ScoringSchemeCreatePreviewResponse.LevelPreview::metricCount)
+                .sum();
+
+        int enabledMetricCount = levelPreviews.stream()
+                .mapToInt(ScoringSchemeCreatePreviewResponse.LevelPreview::enabledMetricCount)
+                .sum();
+
+        return new ScoringSchemeCreatePreviewResponse(
+                CONTRACT_VERSION,
+                buildBasicInfoPreview(request.getBasicInfo()),
+                levelPreviews,
+                levelPreviews.size(),
+                totalMetricCount,
+                enabledMetricCount
+        );
     }
 
     private List<ScoringContractTemplateResponse.RuleTypeOption> buildRuleTypeOptions() {
@@ -143,5 +165,80 @@ public class ScoringContractServiceImpl implements ScoringContractService {
         metricConfig.setWeight(new BigDecimal("1.0"));
         metricConfig.setTargetValue(null);
         return metricConfig;
+    }
+
+    private ScoringSchemeCreatePreviewResponse.BasicInfoPreview buildBasicInfoPreview(
+            ScoringSchemeBasicInfoRequest basicInfo
+    ) {
+        return new ScoringSchemeCreatePreviewResponse.BasicInfoPreview(
+                basicInfo.getSchemeCode(),
+                basicInfo.getSchemeName(),
+                basicInfo.getDescription(),
+                basicInfo.getStatus()
+        );
+    }
+
+    private ScoringSchemeCreatePreviewResponse.LevelPreview buildLevelPreview(
+            ScoringLevelConfigRequest levelConfig
+    ) {
+        ScoringEntityLevel entityLevel = resolveEntityLevel(levelConfig.getEntityLevel());
+
+        List<ScoringSchemeCreatePreviewResponse.MetricPreview> metricPreviews = levelConfig.getMetricConfigs().stream()
+                .map(this::buildMetricPreview)
+                .toList();
+
+        int enabledMetricCount = (int) metricPreviews.stream()
+                .filter(ScoringSchemeCreatePreviewResponse.MetricPreview::enabled)
+                .count();
+
+        return new ScoringSchemeCreatePreviewResponse.LevelPreview(
+                entityLevel.getCode(),
+                entityLevel.getName(),
+                entityLevel.getComparisonScope(),
+                metricPreviews.size(),
+                enabledMetricCount,
+                metricPreviews
+        );
+    }
+
+    private ScoringSchemeCreatePreviewResponse.MetricPreview buildMetricPreview(
+            ScoringMetricConfigRequest metricConfig
+    ) {
+        ScoringMetricKey metricKey = resolveMetricKey(metricConfig.getMetricKey());
+        ScoringRuleType ruleType = resolveRuleType(metricConfig.getRuleType());
+
+        return new ScoringSchemeCreatePreviewResponse.MetricPreview(
+                metricKey.getCode(),
+                metricKey.getName(),
+                metricKey.getDirection(),
+                metricKey.getDataHint(),
+                Boolean.TRUE.equals(metricConfig.getEnabled()),
+                ruleType.getCode(),
+                ruleType.getName(),
+                ruleType.isTargetValueRequired(),
+                metricConfig.getWeight(),
+                metricConfig.getTargetValue()
+        );
+    }
+
+    private ScoringEntityLevel resolveEntityLevel(String code) {
+        return Arrays.stream(ScoringEntityLevel.values())
+                .filter(item -> item.getCode().equals(code))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown entityLevel: " + code));
+    }
+
+    private ScoringMetricKey resolveMetricKey(String code) {
+        return Arrays.stream(ScoringMetricKey.values())
+                .filter(item -> item.getCode().equals(code))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown metricKey: " + code));
+    }
+
+    private ScoringRuleType resolveRuleType(String code) {
+        return Arrays.stream(ScoringRuleType.values())
+                .filter(item -> item.getCode().equals(code))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown ruleType: " + code));
     }
 }
