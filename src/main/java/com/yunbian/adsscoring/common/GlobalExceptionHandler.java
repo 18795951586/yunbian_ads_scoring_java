@@ -1,5 +1,6 @@
 package com.yunbian.adsscoring.common;
 
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -17,6 +18,9 @@ public class GlobalExceptionHandler {
         String message = "validation failed";
         if (ex.getBindingResult().getFieldError() != null) {
             message = ex.getBindingResult().getFieldError().getDefaultMessage();
+        } else if (!ex.getBindingResult().getGlobalErrors().isEmpty()) {
+            ObjectError globalError = ex.getBindingResult().getGlobalErrors().get(0);
+            message = globalError.getDefaultMessage();
         }
         return ApiResponse.failure("VALIDATION_ERROR", message);
     }
