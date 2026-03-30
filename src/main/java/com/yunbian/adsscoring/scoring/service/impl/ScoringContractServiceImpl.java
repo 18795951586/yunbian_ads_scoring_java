@@ -28,7 +28,6 @@ public class ScoringContractServiceImpl implements ScoringContractService {
                 buildRuleTypeOptions(),
                 buildMetricDefinitions(),
                 buildEntityLevelDefinitions(),
-                buildSchemeTemplate(),
                 buildCreateRequestTemplate()
         );
     }
@@ -87,47 +86,6 @@ public class ScoringContractServiceImpl implements ScoringContractService {
                         level.getComparisonScope()
                 ))
                 .toList();
-    }
-
-    private ScoringContractTemplateResponse.SchemeTemplate buildSchemeTemplate() {
-        List<ScoringContractTemplateResponse.LevelTemplate> levelTemplates = Arrays.stream(ScoringEntityLevel.values())
-                .map(this::buildLevelTemplate)
-                .toList();
-
-        return new ScoringContractTemplateResponse.SchemeTemplate(
-                "scheme_template_v2",
-                "评分方案模板V2",
-                "第二刀仅把评分方案创建请求结构收稳；当前仍不执行评分计算，也不落数据库",
-                "DRAFT",
-                levelTemplates
-        );
-    }
-
-    private ScoringContractTemplateResponse.LevelTemplate buildLevelTemplate(ScoringEntityLevel level) {
-        List<ScoringContractTemplateResponse.MetricRuleTemplate> metricRules = Arrays.stream(ScoringMetricKey.values())
-                .map(this::buildMetricRuleTemplate)
-                .toList();
-
-        return new ScoringContractTemplateResponse.LevelTemplate(
-                level.getCode(),
-                level.getName(),
-                level.getComparisonScope(),
-                metricRules
-        );
-    }
-
-    private ScoringContractTemplateResponse.MetricRuleTemplate buildMetricRuleTemplate(ScoringMetricKey metric) {
-        return new ScoringContractTemplateResponse.MetricRuleTemplate(
-                metric.getCode(),
-                metric.getName(),
-                metric.getDirection(),
-                metric.getDataHint(),
-                true,
-                ScoringRuleType.RANKING.getCode(),
-                new BigDecimal("1.0"),
-                null,
-                ScoringRuleType.RANKING.isTargetValueRequired()
-        );
     }
 
     private ScoringSchemeCreateRequest buildCreateRequestTemplate() {
