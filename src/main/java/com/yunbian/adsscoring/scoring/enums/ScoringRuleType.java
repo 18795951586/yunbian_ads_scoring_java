@@ -48,4 +48,16 @@ public enum ScoringRuleType {
     public String getDescription() {
         return description;
     }
+
+    public static ScoringRuleType fromCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("Unknown ruleType: " + code);
+        }
+        for (ScoringRuleType value : values()) {
+            if (value.code.equalsIgnoreCase(code.trim())) {
+                return value;
+            }
+        }
+        throw new IllegalArgumentException("Unknown ruleType: " + code);
+    }
 }

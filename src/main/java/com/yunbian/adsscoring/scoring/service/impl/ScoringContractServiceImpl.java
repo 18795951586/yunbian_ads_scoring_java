@@ -139,7 +139,7 @@ public class ScoringContractServiceImpl implements ScoringContractService {
     private ScoringSchemeCreatePreviewResponse.LevelPreview buildLevelPreview(
             ScoringLevelConfigRequest levelConfig
     ) {
-        ScoringEntityLevel entityLevel = resolveEntityLevel(levelConfig.getEntityLevel());
+        ScoringEntityLevel entityLevel = ScoringEntityLevel.fromCode(levelConfig.getEntityLevel());
 
         List<ScoringSchemeCreatePreviewResponse.MetricPreview> metricPreviews = levelConfig.getMetricConfigs().stream()
                 .map(this::buildMetricPreview)
@@ -162,8 +162,12 @@ public class ScoringContractServiceImpl implements ScoringContractService {
     private ScoringSchemeCreatePreviewResponse.MetricPreview buildMetricPreview(
             ScoringMetricConfigRequest metricConfig
     ) {
-        ScoringMetricKey metricKey = resolveMetricKey(metricConfig.getMetricKey());
-        ScoringRuleType ruleType = resolveRuleType(metricConfig.getRuleType());
+        ScoringMetricKey metricKey = ScoringMetricKey.fromCode(metricConfig.getMetricKey());
+        if (metricKey == null) {
+            throw new IllegalArgumentException("Unknown metricKey: " + metricConfig.getMetricKey());
+        }
+
+        ScoringRuleType ruleType = ScoringRuleType.fromCode(metricConfig.getRuleType());
 
         return new ScoringSchemeCreatePreviewResponse.MetricPreview(
                 metricKey.getCode(),
@@ -177,26 +181,5 @@ public class ScoringContractServiceImpl implements ScoringContractService {
                 metricConfig.getWeight(),
                 metricConfig.getTargetValue()
         );
-    }
-
-    private ScoringEntityLevel resolveEntityLevel(String code) {
-        return Arrays.stream(ScoringEntityLevel.values())
-                .filter(item -> item.getCode().equals(code))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unknown entityLevel: " + code));
-    }
-
-    private ScoringMetricKey resolveMetricKey(String code) {
-        return Arrays.stream(ScoringMetricKey.values())
-                .filter(item -> item.getCode().equals(code))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unknown metricKey: " + code));
-    }
-
-    private ScoringRuleType resolveRuleType(String code) {
-        return Arrays.stream(ScoringRuleType.values())
-                .filter(item -> item.getCode().equals(code))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unknown ruleType: " + code));
     }
 }

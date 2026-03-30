@@ -27,4 +27,16 @@ public enum ScoringEntityLevel {
     public String getComparisonScope() {
         return comparisonScope;
     }
+
+    public static ScoringEntityLevel fromCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("Unknown entityLevel: " + code);
+        }
+        for (ScoringEntityLevel value : values()) {
+            if (value.code.equalsIgnoreCase(code.trim())) {
+                return value;
+            }
+        }
+        throw new IllegalArgumentException("Unknown entityLevel: " + code);
+    }
 }
