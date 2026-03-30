@@ -51,13 +51,25 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         for (int i = 0; i < candidates.size(); i++) {
             MetricCandidate candidate = candidates.get(i);
 
+            int rank;
+            if (i == 0) {
+                rank = 1;
+            } else {
+                BigDecimal prevValue = candidates.get(i - 1).getMetricValue();
+                if (candidate.getMetricValue().compareTo(prevValue) == 0) {
+                    rank = rankingRows.get(i - 1).getRank();
+                } else {
+                    rank = i + 1;
+                }
+            }
+
             CampaignRankingPreviewResponse.CampaignRankingRow row =
                     new CampaignRankingPreviewResponse.CampaignRankingRow();
             row.setCampaignId(candidate.getCampaignId());
             row.setCampaignName(candidate.getCampaignName());
             row.setMetricValue(candidate.getMetricValue());
-            row.setRank(i + 1);
-            row.setScore(buildRankingScore(i + 1, comparisonCount));
+            row.setRank(rank);
+            row.setScore(buildRankingScore(rank, comparisonCount));
 
             rankingRows.add(row);
         }
@@ -124,9 +136,11 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                 continue;
             }
 
+            int[] ranks = buildCompetitionRanks(candidates);
+
             for (int i = 0; i < candidates.size(); i++) {
                 MetricCandidate candidate = candidates.get(i);
-                int rank = i + 1;
+                int rank = ranks[i];
                 BigDecimal score = buildRankingScore(rank, comparisonCount);
                 BigDecimal weightedScore = score.multiply(metricSpec.getWeight());
 
@@ -270,6 +284,20 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         return numerator
                 .multiply(ONE_HUNDRED)
                 .divide(denominator, 4, RoundingMode.HALF_UP);
+    }
+
+    private int[] buildCompetitionRanks(List<MetricCandidate> candidates) {
+        int[] ranks = new int[candidates.size()];
+        for (int i = 0; i < candidates.size(); i++) {
+            if (i == 0) {
+                ranks[i] = 1;
+            } else if (candidates.get(i).getMetricValue().compareTo(candidates.get(i - 1).getMetricValue()) == 0) {
+                ranks[i] = ranks[i - 1];
+            } else {
+                ranks[i] = i + 1;
+            }
+        }
+        return ranks;
     }
 
     private BigDecimal extractMetricValue(
