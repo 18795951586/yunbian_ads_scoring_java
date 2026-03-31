@@ -4,6 +4,7 @@ import com.yunbian.adsscoring.campaign.dto.CampaignMetricsMatrixItem;
 import com.yunbian.adsscoring.campaign.mapper.CampaignMetricsMatrixMapper;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -92,6 +93,71 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         return response;
     }
 
+
+
+    @Override
+    public CampaignSmartBenchmarkPreviewResponse previewCampaignSmartBenchmark(
+            Long sid,
+            LocalDate logDate,
+            ScoringMetricKey metricKey,
+            Integer effectDays
+    ) {
+        List<CampaignMetricsMatrixItem> sourceRows =
+                campaignMetricsMatrixMapper.selectAllMetricsMatrixBySidAndLogDate(sid, logDate);
+
+        List<MetricCandidate> candidates = buildMetricCandidates(sourceRows, metricKey, effectDays);
+        int comparisonCount = candidates.size();
+
+        BigDecimal benchmarkValue = null;
+        if (comparisonCount > 0) {
+            benchmarkValue = metricKey.isHigherBetter()
+                    ? candidates.stream().map(MetricCandidate::getMetricValue).max(BigDecimal::compareTo).orElse(null)
+                    : candidates.stream().map(MetricCandidate::getMetricValue).min(BigDecimal::compareTo).orElse(null);
+        }
+
+        List<CampaignSmartBenchmarkPreviewResponse.CampaignSmartBenchmarkRow> rows = new ArrayList<>();
+        if (benchmarkValue != null) {
+            for (MetricCandidate candidate : candidates) {
+                CampaignSmartBenchmarkPreviewResponse.CampaignSmartBenchmarkRow row =
+                        new CampaignSmartBenchmarkPreviewResponse.CampaignSmartBenchmarkRow();
+                row.setCampaignId(candidate.getCampaignId());
+                row.setCampaignName(candidate.getCampaignName());
+                row.setMetricValue(candidate.getMetricValue());
+                row.setScore(buildSmartBenchmarkScore(candidate.getMetricValue(), benchmarkValue, metricKey));
+                rows.add(row);
+            }
+
+            rows = rows.stream()
+                    .sorted(
+                            Comparator.comparing(
+                                            CampaignSmartBenchmarkPreviewResponse.CampaignSmartBenchmarkRow::getScore,
+                                            Comparator.nullsLast(BigDecimal::compareTo)
+                                    )
+                                    .reversed()
+                                    .thenComparing(
+                                            CampaignSmartBenchmarkPreviewResponse.CampaignSmartBenchmarkRow::getCampaignId,
+                                            Comparator.nullsLast(Long::compareTo)
+                                    )
+                    )
+                    .toList();
+        }
+
+        CampaignSmartBenchmarkPreviewResponse response = new CampaignSmartBenchmarkPreviewResponse();
+        response.setSid(sid);
+        response.setLogDate(logDate);
+        response.setEntityLevel(ScoringEntityLevel.CAMPAIGN.getCode());
+        response.setRuleType(ScoringRuleType.SMART_BENCHMARK.getCode());
+        response.setMetricKey(metricKey.getCode());
+        response.setMetricName(metricKey.getName());
+        response.setMetricDirection(metricKey.getDirection());
+        response.setEffectDays(effectDays);
+        response.setBenchmarkValue(benchmarkValue);
+        response.setRawRowCount(sourceRows.size());
+        response.setComparisonCount(comparisonCount);
+        response.setExcludedNullCount(sourceRows.size() - comparisonCount);
+        response.setRows(rows);
+        return response;
+    }
 
     @Override
     public CampaignTargetValuePreviewResponse previewCampaignTargetValue(
@@ -369,6 +435,44 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                 score = ONE_HUNDRED;
             } else {
                 score = targetValue
+                        .divide(metricValue, 8, RoundingMode.HALF_UP)
+                        .multiply(ONE_HUNDRED);
+            }
+        }
+
+        if (score.compareTo(ZERO) < 0) {
+            return ZERO.setScale(4, RoundingMode.HALF_UP);
+        }
+        if (score.compareTo(ONE_HUNDRED) > 0) {
+            return ONE_HUNDRED.setScale(4, RoundingMode.HALF_UP);
+        }
+        return score.setScale(4, RoundingMode.HALF_UP);
+    }
+
+
+    private BigDecimal buildSmartBenchmarkScore(
+            BigDecimal metricValue,
+            BigDecimal benchmarkValue,
+            ScoringMetricKey metricKey
+    ) {
+        if (metricValue == null || benchmarkValue == null) {
+            return null;
+        }
+
+        BigDecimal score;
+        if (metricKey.isHigherBetter()) {
+            if (benchmarkValue.compareTo(ZERO) == 0) {
+                score = metricValue.compareTo(ZERO) == 0 ? ONE_HUNDRED : ZERO;
+            } else {
+                score = metricValue
+                        .divide(benchmarkValue, 8, RoundingMode.HALF_UP)
+                        .multiply(ONE_HUNDRED);
+            }
+        } else {
+            if (metricValue.compareTo(ZERO) == 0) {
+                score = benchmarkValue.compareTo(ZERO) == 0 ? ONE_HUNDRED : ZERO;
+            } else {
+                score = benchmarkValue
                         .divide(metricValue, 8, RoundingMode.HALF_UP)
                         .multiply(ONE_HUNDRED);
             }

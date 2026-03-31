@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.service;
 
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.request.ScoringSchemeCreateRequest;
@@ -23,6 +24,14 @@ public interface ScoringPreviewService {
             LocalDate logDate,
             Integer effectDays,
             ScoringSchemeCreateRequest request
+    );
+
+
+    CampaignSmartBenchmarkPreviewResponse previewCampaignSmartBenchmark(
+            Long sid,
+            LocalDate logDate,
+            ScoringMetricKey metricKey,
+            Integer effectDays
     );
 
     CampaignTargetValuePreviewResponse previewCampaignTargetValue(

@@ -3,6 +3,7 @@ package com.yunbian.adsscoring.scoring.controller;
 import com.yunbian.adsscoring.common.ApiResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -78,6 +79,33 @@ public class ScoringPreviewController {
                 targetValuePreviewSpec.getMetricKey(),
                 effectDays,
                 targetValuePreviewSpec.getTargetValue()
+        );
+
+        return ApiResponse.success(response);
+    }
+
+
+    @PostMapping("/preview/campaign-smart-benchmark")
+    public ApiResponse<?> previewCampaignSmartBenchmark(
+            @RequestParam("sid") @NotNull Long sid,
+            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
+            @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
+            @Valid @RequestBody ScoringSchemeCreateRequest request
+    ) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
+            return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
+        }
+
+        SmartBenchmarkPreviewSpec smartBenchmarkPreviewSpec = buildCampaignSingleSmartBenchmarkSpec(request);
+        if (smartBenchmarkPreviewSpec.getValidationError() != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", smartBenchmarkPreviewSpec.getValidationError());
+        }
+
+        CampaignSmartBenchmarkPreviewResponse response = scoringPreviewService.previewCampaignSmartBenchmark(
+                sid,
+                logDate,
+                smartBenchmarkPreviewSpec.getMetricKey(),
+                effectDays
         );
 
         return ApiResponse.success(response);
@@ -176,6 +204,74 @@ public class ScoringPreviewController {
         spec.setMetricKey(metricKey);
         spec.setTargetValue(enabledMetric.getTargetValue());
         return spec;
+    }
+
+
+    private SmartBenchmarkPreviewSpec buildCampaignSingleSmartBenchmarkSpec(ScoringSchemeCreateRequest request) {
+        ScoringLevelConfigRequest campaignLevel = null;
+        for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {
+            if (ScoringEntityLevel.CAMPAIGN.getCode().equals(levelConfig.getEntityLevel())) {
+                campaignLevel = levelConfig;
+                break;
+            }
+        }
+
+        if (campaignLevel == null) {
+            return SmartBenchmarkPreviewSpec.error("campaign level config is required");
+        }
+
+        List<ScoringMetricConfigRequest> enabledMetrics = campaignLevel.getMetricConfigs().stream()
+                .filter(metric -> Boolean.TRUE.equals(metric.getEnabled()))
+                .toList();
+
+        if (enabledMetrics.size() != 1) {
+            return SmartBenchmarkPreviewSpec.error(
+                    "campaign level must contain exactly one enabled metric for smart_benchmark preview"
+            );
+        }
+
+        ScoringMetricConfigRequest enabledMetric = enabledMetrics.get(0);
+        if (!ScoringRuleType.SMART_BENCHMARK.getCode().equals(enabledMetric.getRuleType())) {
+            return SmartBenchmarkPreviewSpec.error(
+                    "the only enabled campaign metric must use ruleType=smart_benchmark"
+            );
+        }
+
+        ScoringMetricKey metricKey = ScoringMetricKey.fromCode(enabledMetric.getMetricKey());
+        if (metricKey == null) {
+            return SmartBenchmarkPreviewSpec.error("the enabled campaign metricKey is invalid");
+        }
+
+        SmartBenchmarkPreviewSpec spec = new SmartBenchmarkPreviewSpec();
+        spec.setMetricKey(metricKey);
+        return spec;
+    }
+
+    private static class SmartBenchmarkPreviewSpec {
+        private ScoringMetricKey metricKey;
+        private String validationError;
+
+        static SmartBenchmarkPreviewSpec error(String validationError) {
+            SmartBenchmarkPreviewSpec spec = new SmartBenchmarkPreviewSpec();
+            spec.setValidationError(validationError);
+            return spec;
+        }
+
+        public ScoringMetricKey getMetricKey() {
+            return metricKey;
+        }
+
+        public void setMetricKey(ScoringMetricKey metricKey) {
+            this.metricKey = metricKey;
+        }
+
+        public String getValidationError() {
+            return validationError;
+        }
+
+        public void setValidationError(String validationError) {
+            this.validationError = validationError;
+        }
     }
 
     private static class TargetValuePreviewSpec {
