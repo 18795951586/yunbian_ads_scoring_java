@@ -122,11 +122,9 @@ public class ScoringPreviewController {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
 
-        if (!hasAtLeastOneEnabledRankingMetricOnCampaign(request)) {
-            return ApiResponse.failure(
-                    "VALIDATION_ERROR",
-                    "campaign level must contain at least one enabled metric with ruleType=ranking and weight > 0"
-            );
+        String validationError = validateCampaignWeightedPreviewRequest(request);
+        if (validationError != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", validationError);
         }
 
         CampaignWeightedRankingPreviewResponse response =
@@ -135,29 +133,57 @@ public class ScoringPreviewController {
         return ApiResponse.success(response);
     }
 
-    private boolean hasAtLeastOneEnabledRankingMetricOnCampaign(ScoringSchemeCreateRequest request) {
+    private String validateCampaignWeightedPreviewRequest(ScoringSchemeCreateRequest request) {
+        ScoringLevelConfigRequest campaignLevel = null;
         for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {
-            if (!ScoringEntityLevel.CAMPAIGN.getCode().equals(levelConfig.getEntityLevel())) {
+            if (ScoringEntityLevel.CAMPAIGN.getCode().equals(levelConfig.getEntityLevel())) {
+                campaignLevel = levelConfig;
+                break;
+            }
+        }
+
+        if (campaignLevel == null) {
+            return "campaign level config is required";
+        }
+
+        int validEnabledMetricCount = 0;
+        for (ScoringMetricConfigRequest metricConfig : campaignLevel.getMetricConfigs()) {
+            if (!Boolean.TRUE.equals(metricConfig.getEnabled())) {
                 continue;
             }
 
-            for (ScoringMetricConfigRequest metricConfig : levelConfig.getMetricConfigs()) {
-                if (!Boolean.TRUE.equals(metricConfig.getEnabled())) {
-                    continue;
-                }
-                if (!ScoringRuleType.RANKING.getCode().equals(metricConfig.getRuleType())) {
-                    continue;
-                }
-                if (metricConfig.getWeight() == null) {
-                    continue;
-                }
-                if (metricConfig.getWeight().compareTo(BigDecimal.ZERO) > 0) {
-                    return true;
-                }
+            ScoringRuleType ruleType;
+            try {
+                ruleType = ScoringRuleType.fromCode(metricConfig.getRuleType());
+            } catch (IllegalArgumentException ex) {
+                return "enabled campaign metric ruleType must be one of ranking, target_value, smart_benchmark";
             }
+            if (ruleType != ScoringRuleType.RANKING
+                    && ruleType != ScoringRuleType.TARGET_VALUE
+                    && ruleType != ScoringRuleType.SMART_BENCHMARK) {
+                return "enabled campaign metric ruleType must be one of ranking, target_value, smart_benchmark";
+            }
+
+            if (metricConfig.getWeight() == null || metricConfig.getWeight().compareTo(BigDecimal.ZERO) <= 0) {
+                return "enabled campaign metric weight must be greater than 0";
+            }
+
+            if (ruleType == ScoringRuleType.TARGET_VALUE
+                    && (metricConfig.getTargetValue() == null
+                    || metricConfig.getTargetValue().compareTo(BigDecimal.ZERO) <= 0)) {
+                return "enabled target_value campaign metric targetValue must be greater than 0";
+            }
+
+            validEnabledMetricCount++;
         }
-        return false;
+
+        if (validEnabledMetricCount <= 0) {
+            return "campaign level must contain at least one enabled metric with weight > 0";
+        }
+
+        return null;
     }
+
     private TargetValuePreviewSpec buildCampaignSingleTargetValueSpec(ScoringSchemeCreateRequest request) {
         ScoringLevelConfigRequest campaignLevel = null;
         for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {

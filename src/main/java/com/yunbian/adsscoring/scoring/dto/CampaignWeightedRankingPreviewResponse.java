@@ -12,6 +12,7 @@ public class CampaignWeightedRankingPreviewResponse {
     private String ruleType;
     private Integer effectDays;
     private Integer rawRowCount;
+    private Integer enabledMetricCount;
     private Integer enabledRankingMetricCount;
     private Integer usedMetricCount;
     private Integer skippedMetricCount;
@@ -74,6 +75,14 @@ public class CampaignWeightedRankingPreviewResponse {
         this.enabledRankingMetricCount = enabledRankingMetricCount;
     }
 
+    public Integer getEnabledMetricCount() {
+        return enabledMetricCount;
+    }
+
+    public void setEnabledMetricCount(Integer enabledMetricCount) {
+        this.enabledMetricCount = enabledMetricCount;
+    }
+
     public Integer getUsedMetricCount() {
         return usedMetricCount;
     }
@@ -110,6 +119,7 @@ public class CampaignWeightedRankingPreviewResponse {
 
         private String metricKey;
         private String metricName;
+        private String ruleType;
         private BigDecimal weight;
         private Integer comparisonCount;
         private Integer excludedNullCount;
@@ -129,6 +139,14 @@ public class CampaignWeightedRankingPreviewResponse {
 
         public void setMetricName(String metricName) {
             this.metricName = metricName;
+        }
+
+        public String getRuleType() {
+            return ruleType;
+        }
+
+        public void setRuleType(String ruleType) {
+            this.ruleType = ruleType;
         }
 
         public BigDecimal getWeight() {
@@ -226,6 +244,7 @@ public class CampaignWeightedRankingPreviewResponse {
 
         private String metricKey;
         private String metricName;
+        private String ruleType;
         private BigDecimal metricValue;
         private Integer rank;
         private BigDecimal score;
@@ -246,6 +265,14 @@ public class CampaignWeightedRankingPreviewResponse {
 
         public void setMetricName(String metricName) {
             this.metricName = metricName;
+        }
+
+        public String getRuleType() {
+            return ruleType;
+        }
+
+        public void setRuleType(String ruleType) {
+            this.ruleType = ruleType;
         }
 
         public BigDecimal getMetricValue() {
