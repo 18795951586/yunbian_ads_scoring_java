@@ -3,6 +3,7 @@ package com.yunbian.adsscoring.scoring.service.impl;
 import com.yunbian.adsscoring.campaign.dto.CampaignMetricsMatrixItem;
 import com.yunbian.adsscoring.campaign.mapper.CampaignMetricsMatrixMapper;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
@@ -225,13 +226,85 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
     }
 
     @Override
-    public CampaignWeightedRankingPreviewResponse calculateCampaignScoring(
+    public CampaignScoringResponse calculateCampaignScoring(
             Long sid,
             LocalDate logDate,
             Integer effectDays,
             ScoringSchemeCreateRequest request
     ) {
-        return buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request);
+        return toCampaignScoringResponse(buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request));
+    }
+
+
+    private CampaignScoringResponse toCampaignScoringResponse(CampaignWeightedRankingPreviewResponse previewResponse) {
+        CampaignScoringResponse response = new CampaignScoringResponse();
+        response.setSid(previewResponse.getSid());
+        response.setLogDate(previewResponse.getLogDate());
+        response.setEntityLevel(previewResponse.getEntityLevel());
+        response.setRuleType(previewResponse.getRuleType());
+        response.setEffectDays(previewResponse.getEffectDays());
+        response.setRawRowCount(previewResponse.getRawRowCount());
+        response.setEnabledMetricCount(previewResponse.getEnabledMetricCount());
+        response.setEnabledRankingMetricCount(previewResponse.getEnabledRankingMetricCount());
+        response.setUsedMetricCount(previewResponse.getUsedMetricCount());
+        response.setSkippedMetricCount(previewResponse.getSkippedMetricCount());
+
+        List<CampaignScoringResponse.MetricSummary> metricSummaries = previewResponse.getMetricSummaries().stream()
+                .map(this::toCampaignScoringMetricSummary)
+                .toList();
+        response.setMetricSummaries(metricSummaries);
+
+        List<CampaignScoringResponse.CampaignScoringRow> rows = previewResponse.getRows().stream()
+                .map(this::toCampaignScoringRow)
+                .toList();
+        response.setRows(rows);
+        return response;
+    }
+
+    private CampaignScoringResponse.MetricSummary toCampaignScoringMetricSummary(
+            CampaignWeightedRankingPreviewResponse.MetricSummary previewMetricSummary
+    ) {
+        CampaignScoringResponse.MetricSummary metricSummary = new CampaignScoringResponse.MetricSummary();
+        metricSummary.setMetricKey(previewMetricSummary.getMetricKey());
+        metricSummary.setMetricName(previewMetricSummary.getMetricName());
+        metricSummary.setRuleType(previewMetricSummary.getRuleType());
+        metricSummary.setWeight(previewMetricSummary.getWeight());
+        metricSummary.setComparisonCount(previewMetricSummary.getComparisonCount());
+        metricSummary.setExcludedNullCount(previewMetricSummary.getExcludedNullCount());
+        metricSummary.setUsedInAggregation(previewMetricSummary.getUsedInAggregation());
+        return metricSummary;
+    }
+
+    private CampaignScoringResponse.CampaignScoringRow toCampaignScoringRow(
+            CampaignWeightedRankingPreviewResponse.CampaignWeightedRankingRow previewRow
+    ) {
+        CampaignScoringResponse.CampaignScoringRow row = new CampaignScoringResponse.CampaignScoringRow();
+        row.setCampaignId(previewRow.getCampaignId());
+        row.setCampaignName(previewRow.getCampaignName());
+        row.setTotalScore(previewRow.getTotalScore());
+        row.setParticipatingMetricCount(previewRow.getParticipatingMetricCount());
+        row.setParticipatingWeightSum(previewRow.getParticipatingWeightSum());
+
+        List<CampaignScoringResponse.MetricContribution> contributions = previewRow.getMetricContributions().stream()
+                .map(this::toCampaignScoringMetricContribution)
+                .toList();
+        row.setMetricContributions(contributions);
+        return row;
+    }
+
+    private CampaignScoringResponse.MetricContribution toCampaignScoringMetricContribution(
+            CampaignWeightedRankingPreviewResponse.MetricContribution previewContribution
+    ) {
+        CampaignScoringResponse.MetricContribution contribution = new CampaignScoringResponse.MetricContribution();
+        contribution.setMetricKey(previewContribution.getMetricKey());
+        contribution.setMetricName(previewContribution.getMetricName());
+        contribution.setRuleType(previewContribution.getRuleType());
+        contribution.setMetricValue(previewContribution.getMetricValue());
+        contribution.setRank(previewContribution.getRank());
+        contribution.setScore(previewContribution.getScore());
+        contribution.setWeight(previewContribution.getWeight());
+        contribution.setWeightedScore(previewContribution.getWeightedScore());
+        return contribution;
     }
 
     private CampaignWeightedRankingPreviewResponse buildCampaignWeightedScoringResponse(

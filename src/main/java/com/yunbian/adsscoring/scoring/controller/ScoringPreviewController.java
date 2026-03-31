@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.controller;
 
 import com.yunbian.adsscoring.common.ApiResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
@@ -149,7 +150,7 @@ public class ScoringPreviewController {
             return ApiResponse.failure("VALIDATION_ERROR", validationError);
         }
 
-        CampaignWeightedRankingPreviewResponse response =
+        CampaignScoringResponse response =
                 scoringPreviewService.calculateCampaignScoring(sid, logDate, effectDays, request);
 
         return ApiResponse.success(response);
