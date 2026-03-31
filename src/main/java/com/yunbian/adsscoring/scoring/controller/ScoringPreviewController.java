@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.controller;
 
 import com.yunbian.adsscoring.common.ApiResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Validated
 @RestController
@@ -49,6 +51,34 @@ public class ScoringPreviewController {
 
         CampaignRankingPreviewResponse response =
                 scoringPreviewService.previewCampaignRanking(sid, logDate, scoringMetricKey, effectDays);
+
+        return ApiResponse.success(response);
+    }
+
+
+    @PostMapping("/preview/campaign-target-value")
+    public ApiResponse<?> previewCampaignTargetValue(
+            @RequestParam("sid") @NotNull Long sid,
+            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
+            @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
+            @Valid @RequestBody ScoringSchemeCreateRequest request
+    ) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
+            return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
+        }
+
+        TargetValuePreviewSpec targetValuePreviewSpec = buildCampaignSingleTargetValueSpec(request);
+        if (targetValuePreviewSpec.getValidationError() != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", targetValuePreviewSpec.getValidationError());
+        }
+
+        CampaignTargetValuePreviewResponse response = scoringPreviewService.previewCampaignTargetValue(
+                sid,
+                logDate,
+                targetValuePreviewSpec.getMetricKey(),
+                effectDays,
+                targetValuePreviewSpec.getTargetValue()
+        );
 
         return ApiResponse.success(response);
     }
@@ -100,4 +130,88 @@ public class ScoringPreviewController {
         }
         return false;
     }
+    private TargetValuePreviewSpec buildCampaignSingleTargetValueSpec(ScoringSchemeCreateRequest request) {
+        ScoringLevelConfigRequest campaignLevel = null;
+        for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {
+            if (ScoringEntityLevel.CAMPAIGN.getCode().equals(levelConfig.getEntityLevel())) {
+                campaignLevel = levelConfig;
+                break;
+            }
+        }
+
+        if (campaignLevel == null) {
+            return TargetValuePreviewSpec.error("campaign level config is required");
+        }
+
+        List<ScoringMetricConfigRequest> enabledMetrics = campaignLevel.getMetricConfigs().stream()
+                .filter(metric -> Boolean.TRUE.equals(metric.getEnabled()))
+                .toList();
+
+        if (enabledMetrics.size() != 1) {
+            return TargetValuePreviewSpec.error(
+                    "campaign level must contain exactly one enabled metric for target_value preview"
+            );
+        }
+
+        ScoringMetricConfigRequest enabledMetric = enabledMetrics.get(0);
+
+        if (!ScoringRuleType.TARGET_VALUE.getCode().equals(enabledMetric.getRuleType())) {
+            return TargetValuePreviewSpec.error(
+                    "the only enabled campaign metric must use ruleType=target_value"
+            );
+        }
+
+        if (enabledMetric.getTargetValue() == null || enabledMetric.getTargetValue().compareTo(BigDecimal.ZERO) <= 0) {
+            return TargetValuePreviewSpec.error(
+                    "targetValue of the enabled campaign metric must be greater than 0"
+            );
+        }
+
+        ScoringMetricKey metricKey = ScoringMetricKey.fromCode(enabledMetric.getMetricKey());
+        if (metricKey == null) {
+            return TargetValuePreviewSpec.error("the enabled campaign metricKey is invalid");
+        }
+
+        TargetValuePreviewSpec spec = new TargetValuePreviewSpec();
+        spec.setMetricKey(metricKey);
+        spec.setTargetValue(enabledMetric.getTargetValue());
+        return spec;
+    }
+
+    private static class TargetValuePreviewSpec {
+        private ScoringMetricKey metricKey;
+        private BigDecimal targetValue;
+        private String validationError;
+
+        static TargetValuePreviewSpec error(String validationError) {
+            TargetValuePreviewSpec spec = new TargetValuePreviewSpec();
+            spec.setValidationError(validationError);
+            return spec;
+        }
+
+        public ScoringMetricKey getMetricKey() {
+            return metricKey;
+        }
+
+        public void setMetricKey(ScoringMetricKey metricKey) {
+            this.metricKey = metricKey;
+        }
+
+        public BigDecimal getTargetValue() {
+            return targetValue;
+        }
+
+        public void setTargetValue(BigDecimal targetValue) {
+            this.targetValue = targetValue;
+        }
+
+        public String getValidationError() {
+            return validationError;
+        }
+
+        public void setValidationError(String validationError) {
+            this.validationError = validationError;
+        }
+    }
+
 }

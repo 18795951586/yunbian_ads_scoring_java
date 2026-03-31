@@ -3,6 +3,7 @@ package com.yunbian.adsscoring.scoring.service.impl;
 import com.yunbian.adsscoring.campaign.dto.CampaignMetricsMatrixItem;
 import com.yunbian.adsscoring.campaign.mapper.CampaignMetricsMatrixMapper;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -22,6 +23,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class ScoringPreviewServiceImpl implements ScoringPreviewService {
@@ -90,6 +92,62 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         return response;
     }
 
+
+    @Override
+    public CampaignTargetValuePreviewResponse previewCampaignTargetValue(
+            Long sid,
+            LocalDate logDate,
+            ScoringMetricKey metricKey,
+            Integer effectDays,
+            BigDecimal targetValue
+    ) {
+        List<CampaignMetricsMatrixItem> sourceRows =
+                campaignMetricsMatrixMapper.selectAllMetricsMatrixBySidAndLogDate(sid, logDate);
+
+        List<MetricCandidate> candidates = buildMetricCandidates(sourceRows, metricKey, effectDays);
+
+        List<CampaignTargetValuePreviewResponse.CampaignTargetValueRow> rows = new ArrayList<>();
+        for (MetricCandidate candidate : candidates) {
+            CampaignTargetValuePreviewResponse.CampaignTargetValueRow row =
+                    new CampaignTargetValuePreviewResponse.CampaignTargetValueRow();
+            row.setCampaignId(candidate.getCampaignId());
+            row.setCampaignName(candidate.getCampaignName());
+            row.setMetricValue(candidate.getMetricValue());
+            row.setScore(buildTargetValueScore(candidate.getMetricValue(), targetValue, metricKey));
+            rows.add(row);
+        }
+
+        rows = rows.stream()
+                .sorted(
+                        Comparator.comparing(
+                                        CampaignTargetValuePreviewResponse.CampaignTargetValueRow::getScore,
+                                        Comparator.nullsLast(BigDecimal::compareTo)
+                                )
+                                .reversed()
+                                .thenComparing(
+                                        CampaignTargetValuePreviewResponse.CampaignTargetValueRow::getCampaignId,
+                                        Comparator.nullsLast(Long::compareTo)
+                                )
+                )
+                .toList();
+
+        CampaignTargetValuePreviewResponse response = new CampaignTargetValuePreviewResponse();
+        response.setSid(sid);
+        response.setLogDate(logDate);
+        response.setEntityLevel(ScoringEntityLevel.CAMPAIGN.getCode());
+        response.setRuleType(ScoringRuleType.TARGET_VALUE.getCode());
+        response.setMetricKey(metricKey.getCode());
+        response.setMetricName(metricKey.getName());
+        response.setMetricDirection(metricKey.getDirection());
+        response.setEffectDays(effectDays);
+        response.setTargetValue(targetValue);
+        response.setRawRowCount(sourceRows.size());
+        response.setComparisonCount(candidates.size());
+        response.setExcludedNullCount(sourceRows.size() - candidates.size());
+        response.setRows(rows);
+        return response;
+    }
+
     @Override
     public CampaignWeightedRankingPreviewResponse previewCampaignWeightedRanking(
             Long sid,
@@ -109,6 +167,7 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                 .filter(metric -> Boolean.TRUE.equals(metric.getEnabled()))
                 .filter(metric -> ScoringRuleType.RANKING.getCode().equals(metric.getRuleType()))
                 .map(this::buildRankingMetricSpec)
+                .filter(Objects::nonNull)
                 .toList();
 
         List<CampaignWeightedRankingPreviewResponse.MetricSummary> metricSummaries = new ArrayList<>();
@@ -210,10 +269,13 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
     }
 
     private RankingMetricSpec buildRankingMetricSpec(ScoringMetricConfigRequest metricConfig) {
+        ScoringMetricKey metricKey = ScoringMetricKey.fromCode(metricConfig.getMetricKey());
+        if (metricKey == null) {
+            return null;
+        }
+
         RankingMetricSpec metricSpec = new RankingMetricSpec();
-        metricSpec.setMetricKey(
-                ScoringMetricKey.fromCode(metricConfig.getMetricKey())
-        );
+        metricSpec.setMetricKey(metricKey);
         metricSpec.setWeight(metricConfig.getWeight());
         return metricSpec;
     }
@@ -284,6 +346,41 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         return numerator
                 .multiply(ONE_HUNDRED)
                 .divide(denominator, 4, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal buildTargetValueScore(BigDecimal metricValue, BigDecimal targetValue, ScoringMetricKey metricKey) {
+        if (metricValue == null || targetValue == null || targetValue.compareTo(ZERO) == 0) {
+            return null;
+        }
+
+        BigDecimal score;
+        if (metricKey.isHigherBetter()) {
+            if (metricValue.compareTo(targetValue) >= 0) {
+                score = ONE_HUNDRED;
+            } else {
+                score = metricValue
+                        .divide(targetValue, 8, RoundingMode.HALF_UP)
+                        .multiply(ONE_HUNDRED);
+            }
+        } else {
+            if (metricValue.compareTo(targetValue) <= 0) {
+                score = ONE_HUNDRED;
+            } else if (metricValue.compareTo(ZERO) == 0) {
+                score = ONE_HUNDRED;
+            } else {
+                score = targetValue
+                        .divide(metricValue, 8, RoundingMode.HALF_UP)
+                        .multiply(ONE_HUNDRED);
+            }
+        }
+
+        if (score.compareTo(ZERO) < 0) {
+            return ZERO.setScale(4, RoundingMode.HALF_UP);
+        }
+        if (score.compareTo(ONE_HUNDRED) > 0) {
+            return ONE_HUNDRED.setScale(4, RoundingMode.HALF_UP);
+        }
+        return score.setScale(4, RoundingMode.HALF_UP);
     }
 
     private int[] buildCompetitionRanks(List<MetricCandidate> candidates) {
