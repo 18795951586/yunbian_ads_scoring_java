@@ -229,20 +229,18 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("campaign level config is required"));
 
-        List<RankingMetricSpec> rankingMetricSpecs = campaignLevelConfig.getMetricConfigs().stream()
+        List<WeightedMetricSpec> metricSpecs = campaignLevelConfig.getMetricConfigs().stream()
                 .filter(metric -> Boolean.TRUE.equals(metric.getEnabled()))
-                .filter(metric -> ScoringRuleType.RANKING.getCode().equals(metric.getRuleType()))
-                .map(this::buildRankingMetricSpec)
+                .filter(metric -> metric.getWeight() != null && metric.getWeight().compareTo(ZERO) > 0)
+                .map(this::buildWeightedMetricSpec)
                 .filter(Objects::nonNull)
                 .toList();
 
         List<CampaignWeightedRankingPreviewResponse.MetricSummary> metricSummaries = new ArrayList<>();
         Map<Long, WeightedRowAccumulator> rowAccumulatorMap = new LinkedHashMap<>();
 
-        for (RankingMetricSpec metricSpec : rankingMetricSpecs) {
+        for (WeightedMetricSpec metricSpec : metricSpecs) {
             List<MetricCandidate> candidates = buildMetricCandidates(sourceRows, metricSpec.getMetricKey(), effectDays);
-            sortMetricCandidates(candidates, metricSpec.getMetricKey());
-
             int comparisonCount = candidates.size();
             int excludedNullCount = sourceRows.size() - comparisonCount;
             boolean usedInAggregation = comparisonCount > 0 && metricSpec.getWeight().compareTo(ZERO) > 0;
@@ -251,6 +249,7 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                     new CampaignWeightedRankingPreviewResponse.MetricSummary();
             metricSummary.setMetricKey(metricSpec.getMetricKey().getCode());
             metricSummary.setMetricName(metricSpec.getMetricKey().getName());
+            metricSummary.setRuleType(metricSpec.getRuleType().getCode());
             metricSummary.setWeight(metricSpec.getWeight());
             metricSummary.setComparisonCount(comparisonCount);
             metricSummary.setExcludedNullCount(excludedNullCount);
@@ -261,20 +260,22 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                 continue;
             }
 
-            int[] ranks = buildCompetitionRanks(candidates);
+            Map<Long, MetricScoreSnapshot> scoreSnapshotByCampaignId =
+                    buildMetricScoreSnapshotByCampaignId(metricSpec, candidates);
 
-            for (int i = 0; i < candidates.size(); i++) {
-                MetricCandidate candidate = candidates.get(i);
-                int rank = ranks[i];
-                BigDecimal score = buildRankingScore(rank, comparisonCount);
+            for (MetricScoreSnapshot snapshot : scoreSnapshotByCampaignId.values()) {
+                BigDecimal score = snapshot.getScore();
+                if (score == null) {
+                    continue;
+                }
                 BigDecimal weightedScore = score.multiply(metricSpec.getWeight());
 
                 WeightedRowAccumulator accumulator = rowAccumulatorMap.computeIfAbsent(
-                        candidate.getCampaignId(),
+                        snapshot.getCampaignId(),
                         key -> {
                             WeightedRowAccumulator value = new WeightedRowAccumulator();
-                            value.setCampaignId(candidate.getCampaignId());
-                            value.setCampaignName(candidate.getCampaignName());
+                            value.setCampaignId(snapshot.getCampaignId());
+                            value.setCampaignName(snapshot.getCampaignName());
                             value.setWeightedScoreSum(ZERO);
                             value.setParticipatingWeightSum(ZERO);
                             value.setMetricContributions(new ArrayList<>());
@@ -282,7 +283,7 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                         }
                 );
 
-                accumulator.setCampaignName(candidate.getCampaignName());
+                accumulator.setCampaignName(snapshot.getCampaignName());
                 accumulator.setWeightedScoreSum(accumulator.getWeightedScoreSum().add(weightedScore));
                 accumulator.setParticipatingWeightSum(accumulator.getParticipatingWeightSum().add(metricSpec.getWeight()));
 
@@ -290,8 +291,9 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
                         new CampaignWeightedRankingPreviewResponse.MetricContribution();
                 contribution.setMetricKey(metricSpec.getMetricKey().getCode());
                 contribution.setMetricName(metricSpec.getMetricKey().getName());
-                contribution.setMetricValue(candidate.getMetricValue());
-                contribution.setRank(rank);
+                contribution.setRuleType(metricSpec.getRuleType().getCode());
+                contribution.setMetricValue(snapshot.getMetricValue());
+                contribution.setRank(snapshot.getRank());
                 contribution.setScore(score);
                 contribution.setWeight(metricSpec.getWeight());
                 contribution.setWeightedScore(weightedScore.setScale(4, RoundingMode.HALF_UP));
@@ -318,6 +320,9 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         int usedMetricCount = (int) metricSummaries.stream()
                 .filter(summary -> Boolean.TRUE.equals(summary.getUsedInAggregation()))
                 .count();
+        int enabledRankingMetricCount = (int) metricSpecs.stream()
+                .filter(metric -> metric.getRuleType() == ScoringRuleType.RANKING)
+                .count();
 
         CampaignWeightedRankingPreviewResponse response = new CampaignWeightedRankingPreviewResponse();
         response.setSid(sid);
@@ -326,23 +331,91 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         response.setRuleType(ScoringRuleType.RANKING.getCode());
         response.setEffectDays(effectDays);
         response.setRawRowCount(sourceRows.size());
-        response.setEnabledRankingMetricCount(rankingMetricSpecs.size());
+        response.setEnabledMetricCount(metricSpecs.size());
+        response.setEnabledRankingMetricCount(enabledRankingMetricCount);
         response.setUsedMetricCount(usedMetricCount);
-        response.setSkippedMetricCount(rankingMetricSpecs.size() - usedMetricCount);
+        response.setSkippedMetricCount(metricSpecs.size() - usedMetricCount);
         response.setMetricSummaries(metricSummaries);
         response.setRows(rows);
         return response;
     }
 
-    private RankingMetricSpec buildRankingMetricSpec(ScoringMetricConfigRequest metricConfig) {
+    private Map<Long, MetricScoreSnapshot> buildMetricScoreSnapshotByCampaignId(
+            WeightedMetricSpec metricSpec,
+            List<MetricCandidate> candidates
+    ) {
+        Map<Long, MetricScoreSnapshot> snapshotByCampaignId = new LinkedHashMap<>();
+        if (candidates.isEmpty()) {
+            return snapshotByCampaignId;
+        }
+
+        if (metricSpec.getRuleType() == ScoringRuleType.RANKING) {
+            sortMetricCandidates(candidates, metricSpec.getMetricKey());
+            int[] ranks = buildCompetitionRanks(candidates);
+            for (int i = 0; i < candidates.size(); i++) {
+                MetricCandidate candidate = candidates.get(i);
+                MetricScoreSnapshot snapshot = new MetricScoreSnapshot();
+                snapshot.setCampaignId(candidate.getCampaignId());
+                snapshot.setCampaignName(candidate.getCampaignName());
+                snapshot.setMetricValue(candidate.getMetricValue());
+                snapshot.setRank(ranks[i]);
+                snapshot.setScore(buildRankingScore(ranks[i], candidates.size()));
+                snapshotByCampaignId.put(candidate.getCampaignId(), snapshot);
+            }
+            return snapshotByCampaignId;
+        }
+
+        BigDecimal smartBenchmark = null;
+        if (metricSpec.getRuleType() == ScoringRuleType.SMART_BENCHMARK) {
+            smartBenchmark = metricSpec.getMetricKey().isHigherBetter()
+                    ? candidates.stream().map(MetricCandidate::getMetricValue).max(BigDecimal::compareTo).orElse(null)
+                    : candidates.stream().map(MetricCandidate::getMetricValue).min(BigDecimal::compareTo).orElse(null);
+        }
+
+        for (MetricCandidate candidate : candidates) {
+            MetricScoreSnapshot snapshot = new MetricScoreSnapshot();
+            snapshot.setCampaignId(candidate.getCampaignId());
+            snapshot.setCampaignName(candidate.getCampaignName());
+            snapshot.setMetricValue(candidate.getMetricValue());
+
+            if (metricSpec.getRuleType() == ScoringRuleType.TARGET_VALUE) {
+                snapshot.setScore(
+                        buildTargetValueScore(candidate.getMetricValue(), metricSpec.getTargetValue(), metricSpec.getMetricKey())
+                );
+            } else if (metricSpec.getRuleType() == ScoringRuleType.SMART_BENCHMARK) {
+                snapshot.setScore(
+                        buildSmartBenchmarkScore(candidate.getMetricValue(), smartBenchmark, metricSpec.getMetricKey())
+                );
+            }
+            snapshotByCampaignId.put(candidate.getCampaignId(), snapshot);
+        }
+        return snapshotByCampaignId;
+    }
+
+    private WeightedMetricSpec buildWeightedMetricSpec(ScoringMetricConfigRequest metricConfig) {
         ScoringMetricKey metricKey = ScoringMetricKey.fromCode(metricConfig.getMetricKey());
         if (metricKey == null) {
             return null;
         }
 
-        RankingMetricSpec metricSpec = new RankingMetricSpec();
+        ScoringRuleType ruleType;
+        try {
+            ruleType = ScoringRuleType.fromCode(metricConfig.getRuleType());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+
+        if (ruleType != ScoringRuleType.RANKING
+                && ruleType != ScoringRuleType.TARGET_VALUE
+                && ruleType != ScoringRuleType.SMART_BENCHMARK) {
+            return null;
+        }
+
+        WeightedMetricSpec metricSpec = new WeightedMetricSpec();
         metricSpec.setMetricKey(metricKey);
+        metricSpec.setRuleType(ruleType);
         metricSpec.setWeight(metricConfig.getWeight());
+        metricSpec.setTargetValue(metricConfig.getTargetValue());
         return metricSpec;
     }
 
@@ -550,10 +623,12 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         };
     }
 
-    private static class RankingMetricSpec {
+    private static class WeightedMetricSpec {
 
         private ScoringMetricKey metricKey;
+        private ScoringRuleType ruleType;
         private BigDecimal weight;
+        private BigDecimal targetValue;
 
         public ScoringMetricKey getMetricKey() {
             return metricKey;
@@ -569,6 +644,71 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
 
         public void setWeight(BigDecimal weight) {
             this.weight = weight;
+        }
+
+        public ScoringRuleType getRuleType() {
+            return ruleType;
+        }
+
+        public void setRuleType(ScoringRuleType ruleType) {
+            this.ruleType = ruleType;
+        }
+
+        public BigDecimal getTargetValue() {
+            return targetValue;
+        }
+
+        public void setTargetValue(BigDecimal targetValue) {
+            this.targetValue = targetValue;
+        }
+    }
+
+    private static class MetricScoreSnapshot {
+
+        private Long campaignId;
+        private String campaignName;
+        private BigDecimal metricValue;
+        private Integer rank;
+        private BigDecimal score;
+
+        public Long getCampaignId() {
+            return campaignId;
+        }
+
+        public void setCampaignId(Long campaignId) {
+            this.campaignId = campaignId;
+        }
+
+        public String getCampaignName() {
+            return campaignName;
+        }
+
+        public void setCampaignName(String campaignName) {
+            this.campaignName = campaignName;
+        }
+
+        public BigDecimal getMetricValue() {
+            return metricValue;
+        }
+
+        public void setMetricValue(BigDecimal metricValue) {
+            this.metricValue = metricValue;
+        }
+
+        public Integer getRank() {
+            return rank;
+        }
+
+        public void setRank(Integer rank) {
+            this.rank = rank;
+        }
+
+        public BigDecimal getScore() {
+            return score;
+        }
+
+        public void setScore(BigDecimal score) {
+            this.score = score;
         }
     }
 
