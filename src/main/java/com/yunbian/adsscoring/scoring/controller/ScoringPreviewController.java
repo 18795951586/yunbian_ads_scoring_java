@@ -133,6 +133,28 @@ public class ScoringPreviewController {
         return ApiResponse.success(response);
     }
 
+    @PostMapping("/calculate/campaign")
+    public ApiResponse<?> calculateCampaignScoring(
+            @RequestParam("sid") @NotNull Long sid,
+            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
+            @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
+            @Valid @RequestBody ScoringSchemeCreateRequest request
+    ) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
+            return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
+        }
+
+        String validationError = validateCampaignWeightedPreviewRequest(request);
+        if (validationError != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", validationError);
+        }
+
+        CampaignWeightedRankingPreviewResponse response =
+                scoringPreviewService.calculateCampaignScoring(sid, logDate, effectDays, request);
+
+        return ApiResponse.success(response);
+    }
+
     private String validateCampaignWeightedPreviewRequest(ScoringSchemeCreateRequest request) {
         ScoringLevelConfigRequest campaignLevel = null;
         for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {

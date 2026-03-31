@@ -26,6 +26,13 @@ public interface ScoringPreviewService {
             ScoringSchemeCreateRequest request
     );
 
+    CampaignWeightedRankingPreviewResponse calculateCampaignScoring(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    );
+
 
     CampaignSmartBenchmarkPreviewResponse previewCampaignSmartBenchmark(
             Long sid,

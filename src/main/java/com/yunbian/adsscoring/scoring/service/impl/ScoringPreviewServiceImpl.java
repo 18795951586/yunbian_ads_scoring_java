@@ -221,6 +221,25 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
             Integer effectDays,
             ScoringSchemeCreateRequest request
     ) {
+        return buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request);
+    }
+
+    @Override
+    public CampaignWeightedRankingPreviewResponse calculateCampaignScoring(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
+        return buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request);
+    }
+
+    private CampaignWeightedRankingPreviewResponse buildCampaignWeightedScoringResponse(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
         List<CampaignMetricsMatrixItem> sourceRows =
                 campaignMetricsMatrixMapper.selectAllMetricsMatrixBySidAndLogDate(sid, logDate);
 
