@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.service.impl;
 
 import com.yunbian.adsscoring.bidword.dto.BidwordMetricsMatrixItem;
 import com.yunbian.adsscoring.bidword.mapper.BidwordMetricsMatrixMapper;
+import com.yunbian.adsscoring.scoring.dto.BidwordScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.BidwordWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -152,6 +153,87 @@ public class BidwordWeightedPreviewService {
         response.setRows(rows);
         return response;
     }
+
+    
+    public BidwordScoringResponse calculateBidwordScoring(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
+        return toBidwordScoringResponse(previewBidwordWeightedRanking(sid, logDate, effectDays, request));
+    }
+
+    private BidwordScoringResponse toBidwordScoringResponse(BidwordWeightedRankingPreviewResponse previewResponse) {
+        BidwordScoringResponse response = new BidwordScoringResponse();
+        response.setSid(previewResponse.getSid());
+        response.setLogDate(previewResponse.getLogDate());
+        response.setEntityLevel(previewResponse.getEntityLevel());
+        response.setRuleType(previewResponse.getRuleType());
+        response.setEffectDays(previewResponse.getEffectDays());
+        response.setRawRowCount(previewResponse.getRawRowCount());
+        response.setEnabledMetricCount(previewResponse.getEnabledMetricCount());
+        response.setEnabledRankingMetricCount(previewResponse.getEnabledRankingMetricCount());
+        response.setUsedMetricCount(previewResponse.getUsedMetricCount());
+        response.setSkippedMetricCount(previewResponse.getSkippedMetricCount());
+        response.setMetricSummaries(previewResponse.getMetricSummaries().stream()
+                .map(this::toBidwordScoringMetricSummary)
+                .toList());
+        response.setRows(previewResponse.getRows().stream()
+                .map(this::toBidwordScoringRow)
+                .toList());
+        return response;
+    }
+
+    private BidwordScoringResponse.MetricSummary toBidwordScoringMetricSummary(
+            BidwordWeightedRankingPreviewResponse.MetricSummary previewMetricSummary
+    ) {
+        BidwordScoringResponse.MetricSummary metricSummary = new BidwordScoringResponse.MetricSummary();
+        metricSummary.setMetricKey(previewMetricSummary.getMetricKey());
+        metricSummary.setMetricName(previewMetricSummary.getMetricName());
+        metricSummary.setRuleType(previewMetricSummary.getRuleType());
+        metricSummary.setWeight(previewMetricSummary.getWeight());
+        metricSummary.setComparisonCount(previewMetricSummary.getComparisonCount());
+        metricSummary.setExcludedNullCount(previewMetricSummary.getExcludedNullCount());
+        metricSummary.setUsedInAggregation(previewMetricSummary.getUsedInAggregation());
+        return metricSummary;
+    }
+
+    private BidwordScoringResponse.BidwordScoringRow toBidwordScoringRow(
+            BidwordWeightedRankingPreviewResponse.BidwordWeightedRankingRow previewRow
+    ) {
+        BidwordScoringResponse.BidwordScoringRow row = new BidwordScoringResponse.BidwordScoringRow();
+        row.setCampaignId(previewRow.getCampaignId());
+        row.setCampaignName(previewRow.getCampaignName());
+        row.setAdgroupId(previewRow.getAdgroupId());
+        row.setAdgroupName(previewRow.getAdgroupName());
+        row.setBidwordId(previewRow.getBidwordId());
+        row.setBidwordText(previewRow.getBidwordText());
+        row.setTotalScore(previewRow.getTotalScore());
+        row.setParticipatingMetricCount(previewRow.getParticipatingMetricCount());
+        row.setParticipatingWeightSum(previewRow.getParticipatingWeightSum());
+        row.setMetricContributions(previewRow.getMetricContributions().stream()
+                .map(this::toBidwordScoringMetricContribution)
+                .toList());
+        return row;
+    }
+
+    private BidwordScoringResponse.MetricContribution toBidwordScoringMetricContribution(
+            BidwordWeightedRankingPreviewResponse.MetricContribution previewContribution
+    ) {
+        BidwordScoringResponse.MetricContribution contribution = new BidwordScoringResponse.MetricContribution();
+        contribution.setMetricKey(previewContribution.getMetricKey());
+        contribution.setMetricName(previewContribution.getMetricName());
+        contribution.setRuleType(previewContribution.getRuleType());
+        contribution.setMetricValue(previewContribution.getMetricValue());
+        contribution.setRank(previewContribution.getRank());
+        contribution.setScore(previewContribution.getScore());
+        contribution.setWeight(previewContribution.getWeight());
+        contribution.setWeightedScore(previewContribution.getWeightedScore());
+        return contribution;
+    }
+
+
 
     private Map<String, BidwordMetricScoreSnapshot> buildBidwordMetricScoreSnapshotByBidwordId(WeightedMetricSpec metricSpec, List<BidwordMetricCandidate> candidates) {
         Map<String, BidwordMetricScoreSnapshot> snapshotById = new LinkedHashMap<>();

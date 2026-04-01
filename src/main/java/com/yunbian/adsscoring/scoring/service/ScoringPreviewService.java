@@ -7,6 +7,7 @@ import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupScoringResponse;
+import com.yunbian.adsscoring.scoring.dto.BidwordScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.BidwordWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.request.ScoringSchemeCreateRequest;
@@ -51,6 +52,15 @@ public interface ScoringPreviewService {
             Integer effectDays,
             ScoringSchemeCreateRequest request
     );
+    
+        BidwordScoringResponse calculateBidwordScoring(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    );
+
+
 
     BidwordWeightedRankingPreviewResponse previewBidwordWeightedRanking(
             Long sid,
