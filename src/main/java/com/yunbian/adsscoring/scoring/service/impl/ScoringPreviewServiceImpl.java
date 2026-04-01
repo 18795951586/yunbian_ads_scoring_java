@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.service.impl;
 
 import com.yunbian.adsscoring.campaign.dto.CampaignMetricsMatrixItem;
 import com.yunbian.adsscoring.campaign.mapper.CampaignMetricsMatrixMapper;
+import com.yunbian.adsscoring.scoring.dto.AdgroupScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignScoringResponse;
@@ -245,6 +246,16 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
             ScoringSchemeCreateRequest request
     ) {
         return toCampaignScoringResponse(buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request));
+    }
+
+    @Override
+    public AdgroupScoringResponse calculateAdgroupScoring(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
+        return adgroupWeightedPreviewService.calculateAdgroupScoring(sid, logDate, effectDays, request);
     }
 
     private CampaignScoringResponse toCampaignScoringResponse(CampaignWeightedRankingPreviewResponse previewResponse) {

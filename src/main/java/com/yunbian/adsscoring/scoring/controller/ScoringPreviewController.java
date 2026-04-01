@@ -7,6 +7,7 @@ import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.AdgroupScoringResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.enums.ScoringRuleType;
@@ -176,6 +177,28 @@ public class ScoringPreviewController {
 
         CampaignScoringResponse response =
                 scoringPreviewService.calculateCampaignScoring(sid, logDate, effectDays, request);
+
+        return ApiResponse.success(response);
+    }
+
+    @PostMapping("/calculate/adgroup")
+    public ApiResponse<?> calculateAdgroupScoring(
+            @RequestParam("sid") @NotNull Long sid,
+            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
+            @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
+            @Valid @RequestBody ScoringSchemeCreateRequest request
+    ) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
+            return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
+        }
+
+        String validationError = validateAdgroupWeightedPreviewRequest(request);
+        if (validationError != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", validationError);
+        }
+
+        AdgroupScoringResponse response =
+                scoringPreviewService.calculateAdgroupScoring(sid, logDate, effectDays, request);
 
         return ApiResponse.success(response);
     }

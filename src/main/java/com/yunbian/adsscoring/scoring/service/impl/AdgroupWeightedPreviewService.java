@@ -2,6 +2,7 @@ package com.yunbian.adsscoring.scoring.service.impl;
 
 import com.yunbian.adsscoring.adgroup.dto.AdgroupMetricsMatrixItem;
 import com.yunbian.adsscoring.adgroup.mapper.AdgroupMetricsMatrixMapper;
+import com.yunbian.adsscoring.scoring.dto.AdgroupScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -38,6 +39,82 @@ public class AdgroupWeightedPreviewService {
             ScoringSchemeCreateRequest request
     ) {
         return buildAdgroupWeightedScoringResponse(sid, logDate, effectDays, request);
+    }
+
+    public AdgroupScoringResponse calculateAdgroupScoring(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
+        return toAdgroupScoringResponse(buildAdgroupWeightedScoringResponse(sid, logDate, effectDays, request));
+    }
+
+    private AdgroupScoringResponse toAdgroupScoringResponse(AdgroupWeightedRankingPreviewResponse previewResponse) {
+        AdgroupScoringResponse response = new AdgroupScoringResponse();
+        response.setSid(previewResponse.getSid());
+        response.setLogDate(previewResponse.getLogDate());
+        response.setEntityLevel(previewResponse.getEntityLevel());
+        response.setRuleType(previewResponse.getRuleType());
+        response.setEffectDays(previewResponse.getEffectDays());
+        response.setRawRowCount(previewResponse.getRawRowCount());
+        response.setEnabledMetricCount(previewResponse.getEnabledMetricCount());
+        response.setEnabledRankingMetricCount(previewResponse.getEnabledRankingMetricCount());
+        response.setUsedMetricCount(previewResponse.getUsedMetricCount());
+        response.setSkippedMetricCount(previewResponse.getSkippedMetricCount());
+        response.setMetricSummaries(previewResponse.getMetricSummaries().stream()
+                .map(this::toAdgroupScoringMetricSummary)
+                .toList());
+        response.setRows(previewResponse.getRows().stream()
+                .map(this::toAdgroupScoringRow)
+                .toList());
+        return response;
+    }
+
+    private AdgroupScoringResponse.MetricSummary toAdgroupScoringMetricSummary(
+            AdgroupWeightedRankingPreviewResponse.MetricSummary previewMetricSummary
+    ) {
+        AdgroupScoringResponse.MetricSummary metricSummary = new AdgroupScoringResponse.MetricSummary();
+        metricSummary.setMetricKey(previewMetricSummary.getMetricKey());
+        metricSummary.setMetricName(previewMetricSummary.getMetricName());
+        metricSummary.setRuleType(previewMetricSummary.getRuleType());
+        metricSummary.setWeight(previewMetricSummary.getWeight());
+        metricSummary.setComparisonCount(previewMetricSummary.getComparisonCount());
+        metricSummary.setExcludedNullCount(previewMetricSummary.getExcludedNullCount());
+        metricSummary.setUsedInAggregation(previewMetricSummary.getUsedInAggregation());
+        return metricSummary;
+    }
+
+    private AdgroupScoringResponse.AdgroupScoringRow toAdgroupScoringRow(
+            AdgroupWeightedRankingPreviewResponse.AdgroupWeightedRankingRow previewRow
+    ) {
+        AdgroupScoringResponse.AdgroupScoringRow row = new AdgroupScoringResponse.AdgroupScoringRow();
+        row.setCampaignId(previewRow.getCampaignId());
+        row.setCampaignName(previewRow.getCampaignName());
+        row.setAdgroupId(previewRow.getAdgroupId());
+        row.setAdgroupName(previewRow.getAdgroupName());
+        row.setTotalScore(previewRow.getTotalScore());
+        row.setParticipatingMetricCount(previewRow.getParticipatingMetricCount());
+        row.setParticipatingWeightSum(previewRow.getParticipatingWeightSum());
+        row.setMetricContributions(previewRow.getMetricContributions().stream()
+                .map(this::toAdgroupScoringMetricContribution)
+                .toList());
+        return row;
+    }
+
+    private AdgroupScoringResponse.MetricContribution toAdgroupScoringMetricContribution(
+            AdgroupWeightedRankingPreviewResponse.MetricContribution previewContribution
+    ) {
+        AdgroupScoringResponse.MetricContribution contribution = new AdgroupScoringResponse.MetricContribution();
+        contribution.setMetricKey(previewContribution.getMetricKey());
+        contribution.setMetricName(previewContribution.getMetricName());
+        contribution.setRuleType(previewContribution.getRuleType());
+        contribution.setMetricValue(previewContribution.getMetricValue());
+        contribution.setRank(previewContribution.getRank());
+        contribution.setScore(previewContribution.getScore());
+        contribution.setWeight(previewContribution.getWeight());
+        contribution.setWeightedScore(previewContribution.getWeightedScore());
+        return contribution;
     }
 
     private AdgroupWeightedRankingPreviewResponse buildAdgroupWeightedScoringResponse(
