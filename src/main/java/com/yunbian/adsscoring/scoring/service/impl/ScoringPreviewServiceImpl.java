@@ -2,10 +2,11 @@ package com.yunbian.adsscoring.scoring.service.impl;
 
 import com.yunbian.adsscoring.campaign.dto.CampaignMetricsMatrixItem;
 import com.yunbian.adsscoring.campaign.mapper.CampaignMetricsMatrixMapper;
+import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignScoringResponse;
-import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
@@ -35,6 +36,9 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
 
     @Resource
     private CampaignMetricsMatrixMapper campaignMetricsMatrixMapper;
+
+    @Resource
+    private AdgroupWeightedPreviewService adgroupWeightedPreviewService;
 
     @Override
     public CampaignRankingPreviewResponse previewCampaignRanking(
@@ -93,8 +97,6 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         response.setRows(rankingRows);
         return response;
     }
-
-
 
     @Override
     public CampaignSmartBenchmarkPreviewResponse previewCampaignSmartBenchmark(
@@ -226,6 +228,16 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
     }
 
     @Override
+    public AdgroupWeightedRankingPreviewResponse previewAdgroupWeightedRanking(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
+        return adgroupWeightedPreviewService.previewAdgroupWeightedRanking(sid, logDate, effectDays, request);
+    }
+
+    @Override
     public CampaignScoringResponse calculateCampaignScoring(
             Long sid,
             LocalDate logDate,
@@ -234,7 +246,6 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
     ) {
         return toCampaignScoringResponse(buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request));
     }
-
 
     private CampaignScoringResponse toCampaignScoringResponse(CampaignWeightedRankingPreviewResponse previewResponse) {
         CampaignScoringResponse response = new CampaignScoringResponse();
@@ -613,7 +624,6 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         }
         return score.setScale(4, RoundingMode.HALF_UP);
     }
-
 
     private BigDecimal buildSmartBenchmarkScore(
             BigDecimal metricValue,

@@ -6,6 +6,7 @@ import com.yunbian.adsscoring.scoring.dto.CampaignScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.enums.ScoringRuleType;
@@ -134,6 +135,29 @@ public class ScoringPreviewController {
         return ApiResponse.success(response);
     }
 
+
+    @PostMapping("/preview/adgroup-weighted-ranking")
+    public ApiResponse<?> previewAdgroupWeightedRanking(
+            @RequestParam("sid") @NotNull Long sid,
+            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
+            @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
+            @Valid @RequestBody ScoringSchemeCreateRequest request
+    ) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
+            return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
+        }
+
+        String validationError = validateAdgroupWeightedPreviewRequest(request);
+        if (validationError != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", validationError);
+        }
+
+        AdgroupWeightedRankingPreviewResponse response =
+                scoringPreviewService.previewAdgroupWeightedRanking(sid, logDate, effectDays, request);
+
+        return ApiResponse.success(response);
+    }
+
     @PostMapping("/calculate/campaign")
     public ApiResponse<?> calculateCampaignScoring(
             @RequestParam("sid") @NotNull Long sid,
@@ -202,6 +226,58 @@ public class ScoringPreviewController {
 
         if (validEnabledMetricCount <= 0) {
             return "campaign level must contain at least one enabled metric with weight > 0";
+        }
+
+        return null;
+    }
+
+
+    private String validateAdgroupWeightedPreviewRequest(ScoringSchemeCreateRequest request) {
+        ScoringLevelConfigRequest adgroupLevel = null;
+        for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {
+            if (ScoringEntityLevel.ADGROUP.getCode().equals(levelConfig.getEntityLevel())) {
+                adgroupLevel = levelConfig;
+                break;
+            }
+        }
+
+        if (adgroupLevel == null) {
+            return "adgroup level config is required";
+        }
+
+        int validEnabledMetricCount = 0;
+        for (ScoringMetricConfigRequest metricConfig : adgroupLevel.getMetricConfigs()) {
+            if (!Boolean.TRUE.equals(metricConfig.getEnabled())) {
+                continue;
+            }
+
+            ScoringRuleType ruleType;
+            try {
+                ruleType = ScoringRuleType.fromCode(metricConfig.getRuleType());
+            } catch (IllegalArgumentException ex) {
+                return "enabled adgroup metric ruleType must be one of ranking, target_value, smart_benchmark";
+            }
+            if (ruleType != ScoringRuleType.RANKING
+                    && ruleType != ScoringRuleType.TARGET_VALUE
+                    && ruleType != ScoringRuleType.SMART_BENCHMARK) {
+                return "enabled adgroup metric ruleType must be one of ranking, target_value, smart_benchmark";
+            }
+
+            if (metricConfig.getWeight() == null || metricConfig.getWeight().compareTo(BigDecimal.ZERO) <= 0) {
+                return "enabled adgroup metric weight must be greater than 0";
+            }
+
+            if (ruleType == ScoringRuleType.TARGET_VALUE
+                    && (metricConfig.getTargetValue() == null
+                    || metricConfig.getTargetValue().compareTo(BigDecimal.ZERO) <= 0)) {
+                return "enabled target_value adgroup metric targetValue must be greater than 0";
+            }
+
+            validEnabledMetricCount++;
+        }
+
+        if (validEnabledMetricCount <= 0) {
+            return "adgroup level must contain at least one enabled metric with weight > 0";
         }
 
         return null;
