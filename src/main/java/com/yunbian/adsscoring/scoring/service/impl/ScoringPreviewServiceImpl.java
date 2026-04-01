@@ -9,6 +9,7 @@ import com.yunbian.adsscoring.scoring.dto.CampaignScoringResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignTargetValuePreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
+import com.yunbian.adsscoring.scoring.dto.BidwordWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.enums.ScoringRuleType;
@@ -40,6 +41,9 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
 
     @Resource
     private AdgroupWeightedPreviewService adgroupWeightedPreviewService;
+
+    @Resource
+    private BidwordWeightedPreviewService bidwordWeightedPreviewService;
 
     @Override
     public CampaignRankingPreviewResponse previewCampaignRanking(
@@ -236,6 +240,16 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
             ScoringSchemeCreateRequest request
     ) {
         return adgroupWeightedPreviewService.previewAdgroupWeightedRanking(sid, logDate, effectDays, request);
+    }
+
+    @Override
+    public BidwordWeightedRankingPreviewResponse previewBidwordWeightedRanking(
+            Long sid,
+            LocalDate logDate,
+            Integer effectDays,
+            ScoringSchemeCreateRequest request
+    ) {
+        return bidwordWeightedPreviewService.previewBidwordWeightedRanking(sid, logDate, effectDays, request);
     }
 
     @Override

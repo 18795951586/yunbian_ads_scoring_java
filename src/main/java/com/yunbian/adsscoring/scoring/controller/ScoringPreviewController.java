@@ -8,6 +8,7 @@ import com.yunbian.adsscoring.scoring.dto.CampaignSmartBenchmarkPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.CampaignWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.dto.AdgroupScoringResponse;
+import com.yunbian.adsscoring.scoring.dto.BidwordWeightedRankingPreviewResponse;
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import com.yunbian.adsscoring.scoring.enums.ScoringMetricKey;
 import com.yunbian.adsscoring.scoring.enums.ScoringRuleType;
@@ -24,7 +25,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Validated
 @RestController
@@ -155,6 +158,29 @@ public class ScoringPreviewController {
 
         AdgroupWeightedRankingPreviewResponse response =
                 scoringPreviewService.previewAdgroupWeightedRanking(sid, logDate, effectDays, request);
+
+        return ApiResponse.success(response);
+    }
+
+
+    @PostMapping("/preview/bidword-weighted-ranking")
+    public ApiResponse<?> previewBidwordWeightedRanking(
+            @RequestParam("sid") @NotNull Long sid,
+            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
+            @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
+            @Valid @RequestBody ScoringSchemeCreateRequest request
+    ) {
+        if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
+            return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
+        }
+
+        String validationError = validateBidwordWeightedPreviewRequest(request);
+        if (validationError != null) {
+            return ApiResponse.failure("VALIDATION_ERROR", validationError);
+        }
+
+        BidwordWeightedRankingPreviewResponse response =
+                scoringPreviewService.previewBidwordWeightedRanking(sid, logDate, effectDays, request);
 
         return ApiResponse.success(response);
     }
@@ -301,6 +327,69 @@ public class ScoringPreviewController {
 
         if (validEnabledMetricCount <= 0) {
             return "adgroup level must contain at least one enabled metric with weight > 0";
+        }
+
+        return null;
+    }
+
+
+    private String validateBidwordWeightedPreviewRequest(ScoringSchemeCreateRequest request) {
+        ScoringLevelConfigRequest bidwordLevel = null;
+        for (ScoringLevelConfigRequest levelConfig : request.getLevelConfigs()) {
+            if (ScoringEntityLevel.BIDWORD.getCode().equals(levelConfig.getEntityLevel())) {
+                bidwordLevel = levelConfig;
+                break;
+            }
+        }
+
+        if (bidwordLevel == null) {
+            return "bidword level config is required";
+        }
+
+        if (bidwordLevel.getMetricConfigs() == null || bidwordLevel.getMetricConfigs().size() != ScoringMetricKey.values().length) {
+            return "bidword level must contain all 7 metrics exactly once";
+        }
+
+        Set<ScoringMetricKey> metricKeys = EnumSet.noneOf(ScoringMetricKey.class);
+        for (ScoringMetricConfigRequest metricConfig : bidwordLevel.getMetricConfigs()) {
+            ScoringMetricKey metricKey = ScoringMetricKey.fromCode(metricConfig.getMetricKey());
+            if (metricKey == null || !metricKeys.add(metricKey)) {
+                return "bidword level must contain all 7 metrics exactly once";
+            }
+        }
+
+        if (metricKeys.size() != ScoringMetricKey.values().length) {
+            return "bidword level must contain all 7 metrics exactly once";
+        }
+
+        int validEnabledMetricCount = 0;
+        for (ScoringMetricConfigRequest metricConfig : bidwordLevel.getMetricConfigs()) {
+            if (!Boolean.TRUE.equals(metricConfig.getEnabled())) {
+                continue;
+            }
+
+            ScoringRuleType ruleType;
+            try {
+                ruleType = ScoringRuleType.fromCode(metricConfig.getRuleType());
+            } catch (IllegalArgumentException ex) {
+                return "enabled bidword metric ruleType must be one of ranking, target_value, smart_benchmark";
+            }
+
+            if (metricConfig.getWeight() == null || metricConfig.getWeight().compareTo(BigDecimal.ZERO) <= 0) {
+                return "enabled bidword metric weight must be greater than 0";
+            }
+
+            if (ruleType == ScoringRuleType.TARGET_VALUE
+                    && (metricConfig.getTargetValue() == null
+                    || metricConfig.getTargetValue().compareTo(BigDecimal.ZERO) <= 0)) {
+                return "enabled target_value bidword metric targetValue must be greater than 0";
+            }
+
+            validEnabledMetricCount++;
+        }
+
+        if (validEnabledMetricCount <= 0) {
+            return "bidword level must contain at least one enabled metric with weight > 0";
         }
 
         return null;
