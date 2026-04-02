@@ -20,7 +20,6 @@ import com.yunbian.adsscoring.scoring.service.ScoringPreviewService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,10 +40,11 @@ public class ScoringPreviewController {
     @GetMapping("/preview/campaign-ranking")
     public ApiResponse<?> previewCampaignRanking(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam("metricKey") String metricKey,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         ScoringMetricKey scoringMetricKey = ScoringMetricKey.fromCode(metricKey);
         if (scoringMetricKey == null) {
             return ApiResponse.failure(
@@ -67,10 +67,11 @@ public class ScoringPreviewController {
     @PostMapping("/preview/campaign-target-value")
     public ApiResponse<?> previewCampaignTargetValue(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -95,10 +96,11 @@ public class ScoringPreviewController {
     @PostMapping("/preview/campaign-smart-benchmark")
     public ApiResponse<?> previewCampaignSmartBenchmark(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -121,10 +123,11 @@ public class ScoringPreviewController {
     @PostMapping("/preview/campaign-weighted-ranking")
     public ApiResponse<?> previewCampaignWeightedRanking(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -144,10 +147,11 @@ public class ScoringPreviewController {
     @PostMapping("/preview/adgroup-weighted-ranking")
     public ApiResponse<?> previewAdgroupWeightedRanking(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -167,10 +171,11 @@ public class ScoringPreviewController {
     @PostMapping("/preview/bidword-weighted-ranking")
     public ApiResponse<?> previewBidwordWeightedRanking(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -189,10 +194,11 @@ public class ScoringPreviewController {
     @PostMapping("/calculate/campaign")
     public ApiResponse<?> calculateCampaignScoring(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -211,10 +217,11 @@ public class ScoringPreviewController {
     @PostMapping("/calculate/adgroup")
     public ApiResponse<?> calculateAdgroupScoring(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }
@@ -234,10 +241,11 @@ public class ScoringPreviewController {
     @PostMapping("/calculate/bidword")
     public ApiResponse<?> calculateBidwordScoring(
             @RequestParam("sid") @NotNull Long sid,
-            @RequestParam("logDate") @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate logDate,
             @RequestParam(value = "effectDays", required = false, defaultValue = "1") Integer effectDays,
             @Valid @RequestBody ScoringSchemeCreateRequest request
     ) {
+        LocalDate logDate = LocalDate.now().minusDays(1);
+
         if (effectDays != 1 && effectDays != 3 && effectDays != 7) {
             return ApiResponse.failure("VALIDATION_ERROR", "effectDays must be one of 1, 3, 7");
         }

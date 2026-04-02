@@ -34,6 +34,7 @@ import java.util.Objects;
 @Service
 public class ScoringPreviewServiceImpl implements ScoringPreviewService {
 
+    // sid/logDate come from controller internal assembly, not external request params.
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
