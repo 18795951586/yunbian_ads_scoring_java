@@ -17,6 +17,7 @@ import java.time.LocalDate;
 
 public interface ScoringPreviewService {
 
+    // sid/logDate are prepared inside controller and passed into service.        
     CampaignRankingPreviewResponse previewCampaignRanking(
             Long sid,
             LocalDate logDate,
