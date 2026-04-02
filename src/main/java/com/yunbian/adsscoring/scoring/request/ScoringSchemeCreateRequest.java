@@ -2,17 +2,30 @@ package com.yunbian.adsscoring.scoring.request;
 
 import com.yunbian.adsscoring.scoring.enums.ScoringEntityLevel;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.AssertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Arrays;
 
 public class ScoringSchemeCreateRequest {
+
+    /**
+     * 当前页码，从 1 开始，默认 1
+     */
+    @Min(value = 1, message = "pageIndex must be greater than or equal to 1")
+    private Integer pageIndex = 1;
+
+    /**
+     * 每页大小，默认 20
+     */
+    @Min(value = 1, message = "pageSize must be greater than or equal to 1")
+    private Integer pageSize = 20;
 
     @NotNull(message = "basicInfo must not be null")
     @Valid
@@ -22,6 +35,22 @@ public class ScoringSchemeCreateRequest {
     @Size(min = 3, max = 3, message = "levelConfigs must contain exactly 3 levels")
     @Valid
     private List<ScoringLevelConfigRequest> levelConfigs;
+
+    public Integer getPageIndex() {
+        return pageIndex;
+    }
+
+    public void setPageIndex(Integer pageIndex) {
+        this.pageIndex = pageIndex;
+    }
+
+    public Integer getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
 
     public ScoringSchemeBasicInfoRequest getBasicInfo() {
         return basicInfo;

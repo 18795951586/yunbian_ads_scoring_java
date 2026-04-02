@@ -16,6 +16,10 @@ public class AdgroupScoringResponse {
     private Integer enabledRankingMetricCount;
     private Integer usedMetricCount;
     private Integer skippedMetricCount;
+    private Integer pageIndex;
+    private Integer pageSize;
+    private Integer totalCount;
+    private Integer totalPages;
     private List<MetricSummary> metricSummaries;
     private List<AdgroupScoringRow> rows;
 
@@ -97,6 +101,38 @@ public class AdgroupScoringResponse {
 
     public void setSkippedMetricCount(Integer skippedMetricCount) {
         this.skippedMetricCount = skippedMetricCount;
+    }
+
+    public Integer getPageIndex() {
+        return pageIndex;
+    }
+
+    public void setPageIndex(Integer pageIndex) {
+        this.pageIndex = pageIndex;
+    }
+
+    public Integer getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    public Integer getTotalCount() {
+        return totalCount;
+    }
+
+    public void setTotalCount(Integer totalCount) {
+        this.totalCount = totalCount;
+    }
+
+    public Integer getTotalPages() {
+        return totalPages;
+    }
+
+    public void setTotalPages(Integer totalPages) {
+        this.totalPages = totalPages;
     }
 
     public List<MetricSummary> getMetricSummaries() {

@@ -47,10 +47,16 @@ public class AdgroupWeightedPreviewService {
             Integer effectDays,
             ScoringSchemeCreateRequest request
     ) {
-        return toAdgroupScoringResponse(buildAdgroupWeightedScoringResponse(sid, logDate, effectDays, request));
+        return toAdgroupScoringResponse(
+                buildAdgroupWeightedScoringResponse(sid, logDate, effectDays, request),
+                request
+        );
     }
 
-    private AdgroupScoringResponse toAdgroupScoringResponse(AdgroupWeightedRankingPreviewResponse previewResponse) {
+    private AdgroupScoringResponse toAdgroupScoringResponse(
+            AdgroupWeightedRankingPreviewResponse previewResponse,
+            ScoringSchemeCreateRequest request
+    ) {
         AdgroupScoringResponse response = new AdgroupScoringResponse();
         response.setSid(previewResponse.getSid());
         response.setLogDate(previewResponse.getLogDate());
@@ -65,9 +71,12 @@ public class AdgroupWeightedPreviewService {
         response.setMetricSummaries(previewResponse.getMetricSummaries().stream()
                 .map(this::toAdgroupScoringMetricSummary)
                 .toList());
-        response.setRows(previewResponse.getRows().stream()
+
+        List<AdgroupScoringResponse.AdgroupScoringRow> allRows = previewResponse.getRows().stream()
                 .map(this::toAdgroupScoringRow)
-                .toList());
+                .toList();
+
+        applyAdgroupPagination(response, allRows, request);
         return response;
     }
 
@@ -115,6 +124,35 @@ public class AdgroupWeightedPreviewService {
         contribution.setWeight(previewContribution.getWeight());
         contribution.setWeightedScore(previewContribution.getWeightedScore());
         return contribution;
+    }
+
+
+    private void applyAdgroupPagination(
+            AdgroupScoringResponse response,
+            List<AdgroupScoringResponse.AdgroupScoringRow> allRows,
+            ScoringSchemeCreateRequest request
+    ) {
+        int pageIndex = normalizePageIndex(request.getPageIndex());
+        int pageSize = normalizePageSize(request.getPageSize());
+        int totalCount = allRows.size();
+        int totalPages = totalCount == 0 ? 0 : (totalCount + pageSize - 1) / pageSize;
+
+        int fromIndex = Math.min((pageIndex - 1) * pageSize, totalCount);
+        int toIndex = Math.min(fromIndex + pageSize, totalCount);
+
+        response.setPageIndex(pageIndex);
+        response.setPageSize(pageSize);
+        response.setTotalCount(totalCount);
+        response.setTotalPages(totalPages);
+        response.setRows(new ArrayList<>(allRows.subList(fromIndex, toIndex)));
+    }
+
+    private int normalizePageIndex(Integer pageIndex) {
+        return pageIndex == null || pageIndex < 1 ? 1 : pageIndex;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        return pageSize == null || pageSize < 1 ? 20 : pageSize;
     }
 
     private AdgroupWeightedRankingPreviewResponse buildAdgroupWeightedScoringResponse(

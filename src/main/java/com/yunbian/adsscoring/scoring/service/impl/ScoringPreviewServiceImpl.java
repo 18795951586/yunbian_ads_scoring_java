@@ -260,7 +260,10 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
             Integer effectDays,
             ScoringSchemeCreateRequest request
     ) {
-        return toCampaignScoringResponse(buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request));
+        return toCampaignScoringResponse(
+                buildCampaignWeightedScoringResponse(sid, logDate, effectDays, request),
+                request
+        );
     }
 
     @Override
@@ -284,30 +287,36 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
     }
 
 
-    private CampaignScoringResponse toCampaignScoringResponse(CampaignWeightedRankingPreviewResponse previewResponse) {
-        CampaignScoringResponse response = new CampaignScoringResponse();
-        response.setSid(previewResponse.getSid());
-        response.setLogDate(previewResponse.getLogDate());
-        response.setEntityLevel(previewResponse.getEntityLevel());
-        response.setRuleType(previewResponse.getRuleType());
-        response.setEffectDays(previewResponse.getEffectDays());
-        response.setRawRowCount(previewResponse.getRawRowCount());
-        response.setEnabledMetricCount(previewResponse.getEnabledMetricCount());
-        response.setEnabledRankingMetricCount(previewResponse.getEnabledRankingMetricCount());
-        response.setUsedMetricCount(previewResponse.getUsedMetricCount());
-        response.setSkippedMetricCount(previewResponse.getSkippedMetricCount());
+    private CampaignScoringResponse toCampaignScoringResponse(
+        CampaignWeightedRankingPreviewResponse previewResponse,
+        ScoringSchemeCreateRequest request
+) {
+    CampaignScoringResponse response = new CampaignScoringResponse();
+    response.setSid(previewResponse.getSid());
+    response.setLogDate(previewResponse.getLogDate());
+    response.setEntityLevel(previewResponse.getEntityLevel());
+    response.setRuleType(previewResponse.getRuleType());
+    response.setEffectDays(previewResponse.getEffectDays());
+    response.setRawRowCount(previewResponse.getRawRowCount());
+    response.setEnabledMetricCount(previewResponse.getEnabledMetricCount());
+    response.setEnabledRankingMetricCount(previewResponse.getEnabledRankingMetricCount());
+    response.setUsedMetricCount(previewResponse.getUsedMetricCount());
+    response.setSkippedMetricCount(previewResponse.getSkippedMetricCount());
 
-        List<CampaignScoringResponse.MetricSummary> metricSummaries = previewResponse.getMetricSummaries().stream()
-                .map(this::toCampaignScoringMetricSummary)
-                .toList();
-        response.setMetricSummaries(metricSummaries);
+    List<CampaignScoringResponse.MetricSummary> metricSummaries = previewResponse.getMetricSummaries().stream()
+            .map(this::toCampaignScoringMetricSummary)
+            .toList();
+    response.setMetricSummaries(metricSummaries);
 
-        List<CampaignScoringResponse.CampaignScoringRow> rows = previewResponse.getRows().stream()
-                .map(this::toCampaignScoringRow)
-                .toList();
-        response.setRows(rows);
-        return response;
-    }
+    List<CampaignScoringResponse.CampaignScoringRow> allRows = previewResponse.getRows().stream()
+            .map(this::toCampaignScoringRow)
+            .toList();
+
+    applyCampaignPagination(response, allRows, request);
+    return response;
+}
+
+
 
     private CampaignScoringResponse.MetricSummary toCampaignScoringMetricSummary(
             CampaignWeightedRankingPreviewResponse.MetricSummary previewMetricSummary
@@ -353,6 +362,35 @@ public class ScoringPreviewServiceImpl implements ScoringPreviewService {
         contribution.setWeight(previewContribution.getWeight());
         contribution.setWeightedScore(previewContribution.getWeightedScore());
         return contribution;
+    }
+
+
+    private void applyCampaignPagination(
+            CampaignScoringResponse response,
+            List<CampaignScoringResponse.CampaignScoringRow> allRows,
+            ScoringSchemeCreateRequest request
+    ) {
+        int pageIndex = normalizePageIndex(request.getPageIndex());
+        int pageSize = normalizePageSize(request.getPageSize());
+        int totalCount = allRows.size();
+        int totalPages = totalCount == 0 ? 0 : (totalCount + pageSize - 1) / pageSize;
+
+        int fromIndex = Math.min((pageIndex - 1) * pageSize, totalCount);
+        int toIndex = Math.min(fromIndex + pageSize, totalCount);
+
+        response.setPageIndex(pageIndex);
+        response.setPageSize(pageSize);
+        response.setTotalCount(totalCount);
+        response.setTotalPages(totalPages);
+        response.setRows(new ArrayList<>(allRows.subList(fromIndex, toIndex)));
+    }
+
+    private int normalizePageIndex(Integer pageIndex) {
+        return pageIndex == null || pageIndex < 1 ? 1 : pageIndex;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        return pageSize == null || pageSize < 1 ? 20 : pageSize;
     }
 
     private CampaignWeightedRankingPreviewResponse buildCampaignWeightedScoringResponse(

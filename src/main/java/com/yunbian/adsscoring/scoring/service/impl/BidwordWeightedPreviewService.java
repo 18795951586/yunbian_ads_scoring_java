@@ -161,10 +161,16 @@ public class BidwordWeightedPreviewService {
             Integer effectDays,
             ScoringSchemeCreateRequest request
     ) {
-        return toBidwordScoringResponse(previewBidwordWeightedRanking(sid, logDate, effectDays, request));
+        return toBidwordScoringResponse(
+                previewBidwordWeightedRanking(sid, logDate, effectDays, request),
+                request
+        );
     }
 
-    private BidwordScoringResponse toBidwordScoringResponse(BidwordWeightedRankingPreviewResponse previewResponse) {
+    private BidwordScoringResponse toBidwordScoringResponse(
+            BidwordWeightedRankingPreviewResponse previewResponse,
+            ScoringSchemeCreateRequest request
+    ) {
         BidwordScoringResponse response = new BidwordScoringResponse();
         response.setSid(previewResponse.getSid());
         response.setLogDate(previewResponse.getLogDate());
@@ -179,9 +185,12 @@ public class BidwordWeightedPreviewService {
         response.setMetricSummaries(previewResponse.getMetricSummaries().stream()
                 .map(this::toBidwordScoringMetricSummary)
                 .toList());
-        response.setRows(previewResponse.getRows().stream()
+
+        List<BidwordScoringResponse.BidwordScoringRow> allRows = previewResponse.getRows().stream()
                 .map(this::toBidwordScoringRow)
-                .toList());
+                .toList();
+
+        applyBidwordPagination(response, allRows, request);
         return response;
     }
 
@@ -231,6 +240,35 @@ public class BidwordWeightedPreviewService {
         contribution.setWeight(previewContribution.getWeight());
         contribution.setWeightedScore(previewContribution.getWeightedScore());
         return contribution;
+    }
+
+
+    private void applyBidwordPagination(
+            BidwordScoringResponse response,
+            List<BidwordScoringResponse.BidwordScoringRow> allRows,
+            ScoringSchemeCreateRequest request
+    ) {
+        int pageIndex = normalizePageIndex(request.getPageIndex());
+        int pageSize = normalizePageSize(request.getPageSize());
+        int totalCount = allRows.size();
+        int totalPages = totalCount == 0 ? 0 : (totalCount + pageSize - 1) / pageSize;
+
+        int fromIndex = Math.min((pageIndex - 1) * pageSize, totalCount);
+        int toIndex = Math.min(fromIndex + pageSize, totalCount);
+
+        response.setPageIndex(pageIndex);
+        response.setPageSize(pageSize);
+        response.setTotalCount(totalCount);
+        response.setTotalPages(totalPages);
+        response.setRows(new ArrayList<>(allRows.subList(fromIndex, toIndex)));
+    }
+
+    private int normalizePageIndex(Integer pageIndex) {
+        return pageIndex == null || pageIndex < 1 ? 1 : pageIndex;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        return pageSize == null || pageSize < 1 ? 20 : pageSize;
     }
 
 
