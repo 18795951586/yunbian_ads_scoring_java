@@ -8,11 +8,13 @@ public class AlgorithmScoreConfig {
     private Long id;
     private Long enterpriseId;
     private Long sid;
-    private String businessType;
+    private String bizCode;
     private Long algorithmTemplateId;
-    private Boolean enabled;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String businessType;
+    private Long businessId;
+    private String uniqueMark;
+    private LocalDateTime createTime;
+    private LocalDateTime lastModifyTime;
 
     public Long getId() {
         return id;
@@ -38,12 +40,12 @@ public class AlgorithmScoreConfig {
         this.sid = sid;
     }
 
-    public String getBusinessType() {
-        return businessType;
+    public String getBizCode() {
+        return bizCode;
     }
 
-    public void setBusinessType(String businessType) {
-        this.businessType = businessType;
+    public void setBizCode(String bizCode) {
+        this.bizCode = bizCode;
     }
 
     public Long getAlgorithmTemplateId() {
@@ -54,27 +56,43 @@ public class AlgorithmScoreConfig {
         this.algorithmTemplateId = algorithmTemplateId;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
+    public String getBusinessType() {
+        return businessType;
     }
 
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
+    public void setBusinessType(String businessType) {
+        this.businessType = businessType;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public Long getBusinessId() {
+        return businessId;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setBusinessId(Long businessId) {
+        this.businessId = businessId;
     }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
+    public String getUniqueMark() {
+        return uniqueMark;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setUniqueMark(String uniqueMark) {
+        this.uniqueMark = uniqueMark;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+
+    public LocalDateTime getLastModifyTime() {
+        return lastModifyTime;
+    }
+
+    public void setLastModifyTime(LocalDateTime lastModifyTime) {
+        this.lastModifyTime = lastModifyTime;
     }
 }
