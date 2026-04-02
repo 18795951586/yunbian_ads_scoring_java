@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunbian.adsscoring.scoring.mapper.AlgorithmScoreDetailMapper">
+
+    <select id="selectByUniqueMark"
+            resultType="com.yunbian.adsscoring.scoring.dto.algorithm.AlgorithmScoreDetail">
+        SELECT
+            id,
+            algorithm_score_id AS algorithmScoreId,
+            indicator_code AS indicatorCode,
+            original_score AS originalScore,
+            weighted_score AS weightedScore,
+            unique_mark AS uniqueMark,
+            create_time AS createTime,
+            last_modify_time AS lastModifyTime
+        FROM algorithm_score_details
+        WHERE unique_mark = #{uniqueMark}
+        LIMIT 1
+    </select>
+
+</mapper>

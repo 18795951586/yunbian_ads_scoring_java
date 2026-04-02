@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunbian.adsscoring.scoring.mapper.AlgorithmCoreIndicatorMapper">
+
+    <select id="selectByAlgorithmTemplateIds"
+            resultType="com.yunbian.adsscoring.scoring.dto.algorithm.AlgorithmCoreIndicator">
+        SELECT
+            id,
+            template_id AS templateId,
+            code,
+            name,
+            type,
+            description,
+            base_weight AS baseWeight,
+            direction,
+            scoring_mode AS scoringMode,
+            target_value AS targetValue,
+            unit,
+            target_range AS targetRange,
+            sort_order AS sortOrder,
+            create_time AS createTime,
+            last_modify_time AS lastModifyTime
+        FROM algorithm_core_indicator
+        WHERE template_id IN
+        <foreach collection="algorithmTemplateIds" item="algorithmTemplateId" open="(" separator="," close=")">
+            #{algorithmTemplateId}
+        </foreach>
+        ORDER BY template_id ASC, sort_order ASC, id ASC
+    </select>
+
+</mapper>

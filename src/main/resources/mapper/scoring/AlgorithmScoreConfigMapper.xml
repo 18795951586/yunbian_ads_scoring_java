@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunbian.adsscoring.scoring.mapper.AlgorithmScoreConfigMapper">
+
+    <select id="selectByEnterpriseAndSidAndBusinessType"
+            resultType="com.yunbian.adsscoring.scoring.dto.algorithm.AlgorithmScoreConfig">
+        SELECT
+            id,
+            enterprise_id AS enterpriseId,
+            sid,
+            biz_code AS bizCode,
+            algorithm_template_id AS algorithmTemplateId,
+            business_type AS businessType,
+            business_id AS businessId,
+            unique_mark AS uniqueMark,
+            create_time AS createTime,
+            last_modify_time AS lastModifyTime
+        FROM algorithm_score_config
+        WHERE enterprise_id = #{enterpriseId}
+          AND sid = #{sid}
+          AND LOWER(business_type) = #{businessType}
+        ORDER BY id ASC
+    </select>
+
+</mapper>
